@@ -15,7 +15,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    // Only redirect on 401 for protected endpoints — not auth endpoints themselves
+    if (err.response?.status === 401 && !err.config?.url?.includes('/auth/')) {
       localStorage.removeItem('momentum_token');
       window.location.href = '/auth';
     }
@@ -28,6 +29,7 @@ export const authApi = {
   signup: (data) => api.post('/auth/signup', data),
   login: (data) => api.post('/auth/login', data),
   me: () => api.get('/auth/me'),
+  deleteAccount: () => api.delete('/auth/account'),
 };
 
 // Habits

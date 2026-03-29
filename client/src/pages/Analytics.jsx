@@ -1,23 +1,18 @@
 import { useState, useEffect } from 'react';
 import { analyticsApi } from '../lib/api';
-import { Flame, TrendingUp, Target, Lightbulb } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-} from 'recharts';
-import { cn } from '../lib/utils';
 
 export default function Analytics() {
   const [streaks, setStreaks] = useState([]);
   const [completion, setCompletion] = useState([]);
   const [heatmap, setHeatmap] = useState([]);
   const [insights, setInsights] = useState([]);
-  const [period, setPeriod] = useState('week');
+  const [period, setPeriod] = useState('90');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       analyticsApi.streaks(),
-      analyticsApi.completion(period),
+      analyticsApi.completion('month'),
       analyticsApi.heatmap(),
       analyticsApi.insights(),
     ])
@@ -31,243 +26,376 @@ export default function Analytics() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    analyticsApi.completion(period)
-      .then((r) => setCompletion(r.data))
-      .catch(console.error);
-  }, [period]);
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-accent text-3xl animate-pulse">🔥</div>
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <span className="material-symbols-outlined text-primary animate-pulse" style={{ fontSize: '36px', fontVariationSettings: "'FILL' 1" }}>insights</span>
+        <p className="text-on-surface-variant text-xs uppercase tracking-widest">Processing data…</p>
       </div>
     );
   }
 
-  const overallRate =
-    completion.length > 0
-      ? Math.round(completion.reduce((sum, d) => sum + d.rate, 0) / completion.filter((d) => d.total > 0).length || 0)
-      : 0;
+  const validDays = completion.filter(d => d.total > 0);
+  const overallRate = validDays.length > 0
+    ? Math.round(validDays.reduce((sum, d) => sum + d.rate, 0) / validDays.length)
+    : 0;
 
-  const insightColors = {
-    positive: { bg: 'bg-success/10', border: 'border-success/30', text: 'text-success' },
-    warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400' },
-    info: { bg: 'bg-violet/10', border: 'border-violet/30', text: 'text-violet' },
-  };
+  const maxCurrentStreak = Math.max(0, ...streaks.map(s => s.currentStreak));
+  const maxLongestStreak = Math.max(0, ...streaks.map(s => s.longestStreak));
+
+  const maxPossible = Math.max(1, maxLongestStreak);
+  const sorted = [...streaks].sort((a, b) => b.currentStreak - a.currentStreak);
+  const chunk = Math.max(1, Math.ceil(sorted.length / 3));
+  const segRate = (arr) => arr.length
+    ? Math.min(100, Math.round(arr.reduce((s, h) => s + (h.currentStreak / maxPossible * 100), 0) / arr.length))
+    : overallRate;
+  const physiologicalRate = segRate(sorted.slice(0, chunk));
+  const cognitiveRate = segRate(sorted.slice(chunk, chunk * 2));
+  const recoveryRate = segRate(sorted.slice(chunk * 2));
+
+  // Pad heatmap to 91 cells for 13-col grid
+  const heatCells = [...heatmap].slice(-91);
+  while (heatCells.length < 91) heatCells.unshift({ rate: null });
+
+  const completionBars = completion.slice(-7);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-slide-up">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Analytics</h1>
-        <p className="text-muted mt-1">Understand your patterns, eliminate your weaknesses.</p>
-      </div>
+    <div className="pt-6 sm:pt-10 lg:pt-24 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 min-h-screen">
 
-      {/* Top metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <MetricCard
-          icon={<Flame size={20} className="text-accent" />}
-          label="Best Streak"
-          value={`${Math.max(0, ...streaks.map((s) => s.currentStreak))} days`}
-        />
-        <MetricCard
-          icon={<TrendingUp size={20} className="text-success" />}
-          label="Longest Ever"
-          value={`${Math.max(0, ...streaks.map((s) => s.longestStreak))} days`}
-        />
-        <MetricCard
-          icon={<Target size={20} className="text-violet" />}
-          label={`${period === 'week' ? '7-day' : '30-day'} Rate`}
-          value={`${isNaN(overallRate) ? 0 : overallRate}%`}
-        />
-        <MetricCard
-          icon={<Lightbulb size={20} className="text-amber-400" />}
-          label="Insights"
-          value={`${insights.length} found`}
-        />
-      </div>
-
-      {/* Streaks per habit */}
-      {streaks.length > 0 && (
-        <section className="card space-y-4">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Flame size={18} className="text-accent" /> Streak Overview
-          </h2>
-          <div className="space-y-3">
-            {streaks.map((s) => (
-              <div key={s.id} className="flex items-center gap-4">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0"
-                  style={{ background: `${s.color || '#F97316'}20` }}
-                >
-                  {s.icon || '⚡'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-sm font-medium text-white truncate">{s.name}</p>
-                    <p className="text-xs text-muted ml-2 shrink-0">
-                      best: <span className="text-white font-semibold">{s.longestStreak}</span>
-                    </p>
-                  </div>
-                  <div className="h-2 bg-elevated rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: s.longestStreak > 0 ? `${(s.currentStreak / s.longestStreak) * 100}%` : '0%',
-                        background: s.color || '#F97316',
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-accent text-sm font-bold">{s.currentStreak}</span>
-                  <span className="text-base">🔥</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Completion chart */}
-      <section className="card space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h2 className="text-lg font-semibold text-white">Completion Rate</h2>
-          <div className="flex gap-2">
-            {['week', 'month'].map((p) => (
+      {/* Header */}
+      <section className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+        <div>
+          <h2 className="text-on-surface-variant font-label text-[0.6875rem] uppercase tracking-[0.2em] mb-2 opacity-60">Performance Deep-Dive</h2>
+          <h1 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tighter uppercase">
+            Analytics &amp; <span className="text-primary">Insights</span>
+          </h1>
+        </div>
+        <div className="sm:text-right">
+          <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant opacity-60 mb-1">Timeframe</p>
+          <div className="bg-surface-container-low p-1 flex gap-1 w-fit">
+            {[['90', '90 Days'], ['year', 'Year'], ['all', 'All Time']].map(([val, label]) => (
               <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                  period === p
-                    ? 'bg-accent text-white'
-                    : 'bg-elevated text-muted hover:text-white border border-border'
-                )}
+                key={val}
+                onClick={() => setPeriod(val)}
+                className={`px-3 sm:px-4 py-1.5 text-[0.625rem] font-bold uppercase tracking-widest transition-colors ${
+                  period === val
+                    ? 'bg-surface-container-highest text-primary'
+                    : 'text-on-surface-variant/50 hover:text-on-surface-variant'
+                }`}
               >
-                {p === 'week' ? 'Last 7 Days' : 'Last 30 Days'}
+                {label}
               </button>
             ))}
           </div>
         </div>
-
-        <div className="h-52">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={completion} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <XAxis
-                dataKey="label"
-                tick={{ fill: '#64748B', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                interval={period === 'month' ? 4 : 0}
-              />
-              <YAxis
-                tick={{ fill: '#64748B', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `${v}%`}
-                domain={[0, 100]}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: '#1A1A27',
-                  border: '1px solid #1E1E2E',
-                  borderRadius: '8px',
-                  color: '#F1F5F9',
-                  fontSize: '13px',
-                }}
-                formatter={(val) => [`${val}%`, 'Completion']}
-                cursor={{ fill: '#1E1E2E' }}
-              />
-              <Bar dataKey="rate" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                {completion.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={entry.rate >= 70 ? '#22C55E' : entry.rate >= 40 ? '#F97316' : '#EF4444'}
-                    fillOpacity={0.85}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </section>
 
-      {/* Heatmap */}
-      {heatmap.length > 0 && (
-        <section className="card space-y-4">
-          <h2 className="text-lg font-semibold text-white">90-Day Heatmap</h2>
-          <div className="flex flex-wrap gap-1">
-            {heatmap.map((d, i) => (
-              <div
-                key={i}
-                title={`${d.date}: ${d.rate !== null ? Math.round(d.rate * 100) + '%' : 'No data'}`}
-                className="w-3 h-3 rounded-sm transition-colors"
-                style={{
-                  background:
-                    d.rate === null
-                      ? '#1E1E2E'
-                      : d.rate >= 0.8
-                      ? '#22C55E'
-                      : d.rate >= 0.5
-                      ? '#F97316'
-                      : d.rate > 0
-                      ? '#EF444488'
-                      : '#1E1E2E',
-                }}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-muted">
-            <span>Less</span>
-            {['#1E1E2E', '#EF444488', '#F97316', '#22C55E'].map((c) => (
-              <div key={c} className="w-3 h-3 rounded-sm" style={{ background: c }} />
-            ))}
-            <span>More</span>
-          </div>
-        </section>
-      )}
+      {/* Main bento grid */}
+      <div className="grid grid-cols-12 gap-4 sm:gap-6">
 
-      {/* AI Insights */}
-      {insights.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Lightbulb size={18} className="text-amber-400" />
-            Insights
-          </h2>
-          <div className="space-y-3">
-            {insights.map((insight, i) => {
-              const style = insightColors[insight.type] || insightColors.info;
-              return (
+        {/* Heatmap — col 8 */}
+        <div className="col-span-12 lg:col-span-8 bg-surface-container-low p-6 sm:p-8 border-l-2 border-primary/20">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-3">
+            <div>
+              <h3 className="font-bold text-base sm:text-lg tracking-tight uppercase">90-Day Consistency Heatmap</h3>
+              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60">Execution Density Matrix</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[0.625rem] font-bold uppercase tracking-widest opacity-40">Low</span>
+              <div className="flex gap-1">
+                <div className="w-3 h-3 bg-surface-container-highest" />
+                <div className="w-3 h-3 bg-primary/20" />
+                <div className="w-3 h-3 bg-primary/50" />
+                <div className="w-3 h-3 bg-primary" />
+              </div>
+              <span className="text-[0.625rem] font-bold uppercase tracking-widest opacity-40">High</span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="grid gap-1.5 min-w-[260px]" style={{ gridTemplateColumns: 'repeat(13, 1fr)' }}>
+              {heatCells.map((cell, i) => {
+                let opacity = 1;
+                let isBg = false;
+                if (cell.rate === null || cell.rate === undefined) { isBg = true; }
+                else if (cell.rate >= 0.8) { opacity = 1; }
+                else if (cell.rate >= 0.5) { opacity = 0.5; }
+                else if (cell.rate >= 0.2) { opacity = 0.2; }
+                else { isBg = true; }
+                return (
+                  <div
+                    key={i}
+                    className={`aspect-square ${isBg ? 'bg-surface-container-highest' : 'bg-primary'}`}
+                    style={!isBg ? { opacity } : {}}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-outline-variant/5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex gap-8 sm:gap-12">
+              <div>
+                <p className="font-label text-[0.625rem] uppercase tracking-widest text-on-surface-variant/50 mb-1">Mean Frequency</p>
+                <p className="text-xl font-black tracking-tighter">{overallRate}%</p>
+              </div>
+              <div>
+                <p className="font-label text-[0.625rem] uppercase tracking-widest text-on-surface-variant/50 mb-1">Best Streak</p>
+                <p className="text-xl font-black tracking-tighter">{maxCurrentStreak} days</p>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-2 text-tertiary font-bold text-[0.6875rem] uppercase tracking-widest">
+              <span className="material-symbols-outlined text-sm">trending_up</span>
+              {maxLongestStreak > 0 ? `PEAK: ${maxLongestStreak} DAYS` : 'BUILDING'}
+            </span>
+          </div>
+        </div>
+
+        {/* Stats column — col 4 */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-4 sm:gap-6">
+          <div className="bg-surface-container-low p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <span className="material-symbols-outlined" style={{ fontSize: '8rem' }}>bolt</span>
+            </div>
+            <div>
+              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60 mb-2">Current Velocity</p>
+              <h4 className="text-5xl sm:text-6xl font-black tracking-tighter text-on-surface">
+                {maxCurrentStreak} <span className="text-xl text-on-surface-variant">DAYS</span>
+              </h4>
+            </div>
+            <div className="mt-6 sm:mt-8">
+              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-primary font-bold">
+                {maxCurrentStreak >= maxLongestStreak && maxLongestStreak > 0 ? 'New Personal Record' : 'Active Streak'}
+              </p>
+              <div className="w-full h-1 bg-surface-container-highest mt-2">
+                <div
+                  className="h-full bg-primary shadow-[0_0_15px_rgba(249,115,22,0.3)]"
+                  style={{ width: maxLongestStreak > 0 ? `${Math.round((maxCurrentStreak / maxLongestStreak) * 100)}%` : '0%' }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="bg-surface-container-low p-5 sm:p-6">
+            <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60 mb-4">Daily Completion Rate</p>
+            <div className="flex items-end gap-1 h-20 sm:h-24 mb-4">
+              {completionBars.length > 0 ? completionBars.map((d, i) => (
                 <div
                   key={i}
-                  className={cn('rounded-xl border px-5 py-4 flex items-start gap-3', style.bg, style.border)}
-                >
-                  <span className="text-xl shrink-0 mt-0.5">{insight.icon}</span>
-                  <p className="text-sm text-slate-200 leading-relaxed">{insight.text}</p>
-                </div>
-              );
-            })}
+                  className={`flex-1 ${d.rate >= 70 ? 'bg-primary' : 'bg-primary/40'}`}
+                  style={{ height: `${Math.max(4, d.rate)}%` }}
+                />
+              )) : (
+                <>
+                  <div className="flex-1 bg-surface-container-highest" style={{ height: '40%' }} />
+                  <div className="flex-1 bg-surface-container-highest" style={{ height: '60%' }} />
+                  <div className="flex-1 bg-primary/60" style={{ height: '85%' }} />
+                  <div className="flex-1 bg-primary" style={{ height: '95%' }} />
+                  <div className="flex-1 bg-primary/40" style={{ height: '70%' }} />
+                  <div className="flex-1 bg-surface-container-highest" style={{ height: '50%' }} />
+                  <div className="flex-1 bg-primary" style={{ height: '100%' }} />
+                </>
+              )}
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-2xl font-black tracking-tighter">{overallRate}%</p>
+              <p className="font-label text-[0.625rem] uppercase tracking-widest opacity-40">{validDays.length} DAYS</p>
+            </div>
           </div>
-        </section>
-      )}
-
-      {insights.length === 0 && completion.length > 0 && (
-        <div className="card text-center py-10">
-          <p className="text-2xl mb-2">🤖</p>
-          <p className="text-white font-semibold">Not enough data yet</p>
-          <p className="text-muted text-sm mt-1">Keep logging for 7+ days and insights will appear here.</p>
         </div>
-      )}
-    </div>
-  );
-}
 
-function MetricCard({ icon, label, value }) {
-  return (
-    <div className="card">
-      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-muted text-xs font-medium">{label}</span></div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+        {/* Precision Insights — col 5 */}
+        <div className="col-span-12 lg:col-span-5 bg-[#1b1b20] p-6 sm:p-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+              <h3 className="font-bold text-base sm:text-lg uppercase tracking-tight">Precision Insights</h3>
+            </div>
+            {insights.length > 0 ? (
+              <div className="space-y-6">
+                {insights.slice(0, 3).map((insight, i) => (
+                  <div key={i}>
+                    <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">
+                      {insight.type === 'positive' ? 'Optimisation Detected' : insight.type === 'warning' ? 'Momentum Inhibitor' : 'System Insight'}
+                    </p>
+                    <p className="text-base sm:text-lg font-medium leading-tight">{insight.text}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">Peak Performance Window</p>
+                  <p className="text-base sm:text-lg font-medium leading-tight">Execute protocols consistently for 7+ days to generate precision insights.</p>
+                </div>
+                <div>
+                  <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">System Status</p>
+                  <p className="text-base sm:text-lg font-medium leading-tight">
+                    {maxCurrentStreak > 0
+                      ? <><span className="text-secondary font-bold">{maxCurrentStreak}-day streak</span> detected. Maintain velocity.</>
+                      : 'Initialise protocols to begin performance tracking.'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">Consistency Alert</p>
+                  <p className="text-base sm:text-lg font-medium leading-tight">
+                    {overallRate >= 70
+                      ? <><span className="text-secondary font-bold">{overallRate}% completion rate</span> — high-performance zone.</>
+                      : 'Track daily completions to identify peak performance windows.'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Executive Summary — col 7 */}
+        <div className="col-span-12 lg:col-span-7 bg-surface-container-low p-6 sm:p-8">
+          <div className="flex justify-between items-start mb-6 sm:mb-8">
+            <div>
+              <h3 className="font-bold text-base sm:text-lg tracking-tight uppercase">Executive Summary</h3>
+              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60">Performance Report Analysis</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+            <div>
+              <h4 className="font-label text-[0.625rem] uppercase tracking-[0.15em] text-on-surface-variant/40 mb-4 border-b border-outline-variant/10 pb-2">
+                Top Performing Segments
+              </h4>
+              <ul className="space-y-4">
+                <li className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Physiological Output</span>
+                  <span className="text-tertiary font-bold tracking-tighter">{physiologicalRate}%</span>
+                </li>
+                <li className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Cognitive Focus</span>
+                  <span className="text-tertiary font-bold tracking-tighter">{cognitiveRate}%</span>
+                </li>
+                <li className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Rest &amp; Recovery</span>
+                  <span className="text-primary font-bold tracking-tighter">{recoveryRate}%</span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-label text-[0.625rem] uppercase tracking-[0.15em] text-on-surface-variant/40 mb-4 border-b border-outline-variant/10 pb-2">
+                Active Momentum Inhibitors
+              </h4>
+              <ul className="space-y-4">
+                {streaks.filter(s => s.currentStreak === 0).slice(0, 3).map((s, i) => (
+                  <li key={s.id} className="flex items-center gap-3">
+                    <div className={`w-1.5 h-1.5 ${i === 0 ? 'bg-error' : i === 1 ? 'bg-primary' : 'bg-surface-container-highest'}`} />
+                    <span className="text-sm font-medium truncate">{s.name}</span>
+                  </li>
+                ))}
+                {streaks.filter(s => s.currentStreak === 0).length === 0 && (
+                  <li className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 bg-tertiary" />
+                    <span className="text-sm font-medium opacity-60">No active inhibitors</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 p-4 bg-surface-container-highest/30 border border-outline-variant/10 italic text-on-surface-variant/80 text-sm leading-relaxed">
+            {overallRate >= 80
+              ? '"System integrity remains high. Velocity has stabilised in the upper decile. Recommendation: Increase resistance in Cognitive Focus segment to maintain growth trajectory."'
+              : overallRate >= 50
+              ? '"Momentum is building. Focus on consistency over intensity. Each completed protocol compounds your performance architecture."'
+              : '"Begin with one high-leverage habit. Establish the neurological baseline before adding complexity to the system."'}
+          </div>
+        </div>
+      </div>
+
+      {/* Momentum Graph */}
+      <section className="mt-4 sm:mt-6 bg-surface-container-low p-6 sm:p-8 relative overflow-hidden" style={{ minHeight: '260px' }}>
+        <div className="mb-6 sm:mb-8">
+          <h3 className="font-bold text-base sm:text-lg uppercase tracking-tight mb-1">Long-term Momentum Graph</h3>
+          <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60">Non-Linear Performance Pathing</p>
+        </div>
+        <div className="relative" style={{ height: '180px' }}>
+          <svg width="100%" height="180" viewBox="0 0 1000 180" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#d0bcff" />
+                <stop offset="100%" stopColor="#4ae176" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,160 Q100,140 200,150 T400,100 T600,60 T800,30 T1000,10"
+              fill="none"
+              stroke="url(#lineGradient)"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+            <line x1="200" y1="0" x2="200" y2="180" stroke="#35343a" strokeWidth="1" strokeDasharray="4" />
+            <line x1="400" y1="0" x2="400" y2="180" stroke="#35343a" strokeWidth="1" strokeDasharray="4" />
+            <line x1="600" y1="0" x2="600" y2="180" stroke="#35343a" strokeWidth="1" strokeDasharray="4" />
+            <line x1="800" y1="0" x2="800" y2="180" stroke="#35343a" strokeWidth="1" strokeDasharray="4" />
+          </svg>
+          <div className="absolute inset-0 flex justify-between items-end pointer-events-none">
+            {['MAY', 'JUN', 'JUL', 'AUG', 'SEP'].map((m, i) => (
+              <span key={m} className={`text-[0.625rem] font-bold uppercase tracking-widest opacity-30 p-2 ${i === 2 ? 'text-primary' : ''}`}>{m}</span>
+            ))}
+          </div>
+        </div>
+        <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/10 blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-64 h-64 bg-primary/5 blur-[100px] pointer-events-none" />
+      </section>
+
+      {/* ── Guide Section ── */}
+      <section className="mt-4 sm:mt-6 bg-surface-container-low p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-6 sm:mb-8">
+          <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>help</span>
+          <div>
+            <h3 className="font-bold text-base sm:text-lg uppercase tracking-tight">How to Use Momentum</h3>
+            <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60">Quick-Start Guide</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              step: '01',
+              icon: 'add_task',
+              title: 'Create Protocols',
+              desc: 'Head to Habits and initialise your first protocol. Choose a category, set a frequency (daily, weekly, or custom), and assign an icon.',
+            },
+            {
+              step: '02',
+              icon: 'check_circle',
+              title: 'Log Daily',
+              desc: "Visit the Dashboard each day and mark your habits complete. Use the chevron button to expand execution notes and log how it went.",
+            },
+            {
+              step: '03',
+              icon: 'local_fire_department',
+              title: 'Build Streaks',
+              desc: 'Consistency compounds. Complete habits each day to build streaks and increase your Streak Multiplier (1 + streak × 0.08). The day resets at midnight AEST.',
+            },
+            {
+              step: '04',
+              icon: 'insights',
+              title: 'Review Analytics',
+              desc: 'Monitor your consistency heatmap, completion rates, and precision insights here to optimise your performance over time.',
+            },
+          ].map(item => (
+            <div key={item.step} className="border-t-2 border-primary/20 pt-5">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-[0.625rem] font-black text-primary/40 uppercase tracking-widest">{item.step}</span>
+                <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1", fontSize: '20px' }}>{item.icon}</span>
+              </div>
+              <h4 className="font-bold text-sm uppercase tracking-widest mb-2">{item.title}</h4>
+              <p className="text-[0.6875rem] text-on-surface-variant opacity-60 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 p-4 bg-surface-container-highest/30 border-l-2 border-secondary/30">
+          <p className="text-[0.625rem] font-black text-secondary uppercase tracking-[0.3em] mb-2">PRO TIP</p>
+          <p className="text-sm text-on-surface-variant/80 leading-relaxed">
+            The Streak Multiplier increases by 0.08× for every consecutive day in your top streak. At 21 days you reach Elite Momentum status — the most significant threshold in the system. Use the Settings menu to manage your account, and Support for further help.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

@@ -12,48 +12,74 @@
   }
 
   body {
-    background-color: #0A0A0F;
-    color: #F1F5F9;
-    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #131318;
+    color: #e4e1e9;
+    font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+    user-select: none;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: #13131A;
+    background: #131318;
   }
   ::-webkit-scrollbar-thumb {
-    background: #1E1E2E;
-    border-radius: 3px;
+    background: #35343a;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #2E2E4E;
+
+  .ease-out-expo {
+    transition-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
   }
 }
 
 @layer components {
+  /* Glass card — used for Auth */
+  .obsidian-layer {
+    background: linear-gradient(145deg, rgba(27, 27, 32, 0.8) 0%, rgba(19, 19, 24, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .momentum-glow {
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.06);
+  }
+
+  /* Primary button — solid orange, sharp corners, dark text */
   .btn-primary {
-    @apply bg-accent hover:bg-orange-400 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-base disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-primary-container text-on-primary-container font-label font-black uppercase tracking-widest text-[0.6875rem] py-3 px-6 transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* Ghost button */
   .btn-ghost {
-    @apply text-muted hover:text-white hover:bg-elevated px-4 py-2 rounded-lg transition-all duration-200 font-medium;
+    @apply text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high px-4 py-2.5 transition-all duration-200 font-medium font-label uppercase tracking-widest text-[0.6875rem];
   }
 
+  /* Card — sharp corners, surface-container-low */
   .card {
-    @apply bg-surface border border-border rounded-xl p-5;
+    @apply bg-surface-container-low p-6;
   }
 
+  /* Input — sharp corners, surface-container-low */
   .input {
-    @apply w-full bg-elevated border border-border rounded-lg px-4 py-2.5 text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 transition-colors;
+    @apply w-full bg-surface-container-low text-on-surface border-none py-4 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container/40 transition-all placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold;
+  }
+
+  /* Kinetic gradient — decorative use only */
+  .kinetic-gradient {
+    background: linear-gradient(135deg, #FF9153 0%, #FF7A23 100%);
   }
 }

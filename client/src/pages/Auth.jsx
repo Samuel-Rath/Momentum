@@ -25,151 +25,249 @@ export default function AuthPage() {
           : await authApi.signup(form);
       login(res.data.token, res.data.user);
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong');
+      setError(err.response?.data?.error || 'Authentication failed');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-base flex">
-      {/* Left panel — branding */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-surface border-r border-border p-12">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">🔥</span>
-          <span className="text-2xl font-bold tracking-tight text-white">Momentum</span>
+    <main className="min-h-screen flex flex-col md:flex-row overflow-hidden bg-background text-on-surface">
+
+      {/* ── Left panel — Marketing ── */}
+      <section className="hidden md:flex flex-col justify-between w-1/2 p-16 relative overflow-hidden bg-surface-container-lowest">
+
+        {/* Background grid overlay */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-surface via-surface-container-lowest to-surface opacity-90" />
+          <div
+            className="absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage: 'linear-gradient(rgba(255,182,144,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,182,144,1) 1px, transparent 1px)',
+              backgroundSize: '80px 80px',
+            }}
+          />
+          {/* Glow accents */}
+          <div className="absolute top-1/4 right-0 w-96 h-96 bg-secondary/10 blur-[120px] rounded-full translate-x-1/2" />
+          <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-primary-container/10 blur-[100px] rounded-full -translate-x-1/2" />
         </div>
 
-        <div className="space-y-6">
-          <h1 className="text-5xl font-extrabold leading-tight text-white">
-            Build habits.<br />
-            <span className="text-accent">Break limits.</span>
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-2">
+          <span className="text-primary-container font-black text-2xl tracking-tighter">MOMENTUM</span>
+        </div>
+
+        {/* Hero text */}
+        <div className="relative z-10 mt-auto mb-auto max-w-lg">
+          <span className="font-label text-primary uppercase tracking-[0.2em] text-[0.6875rem] font-bold">
+            KINETIC PRECISION
+          </span>
+          <h1 className="text-on-surface font-headline font-extrabold text-[3.5rem] leading-[1.1] tracking-[-0.02em] mt-4">
+            DISCIPLINE<br />IS THE<br />ENGINE.
           </h1>
-          <p className="text-muted text-lg max-w-md">
-            Track your daily discipline, visualize your streaks, and let data-driven insights push you further than motivation alone.
+          <p className="text-on-surface-variant mt-8 text-lg font-medium leading-relaxed max-w-md opacity-80">
+            The elite operating system for human potential. Quantify your focus, accelerate your habits, and achieve peak performance.
           </p>
-
-          <div className="grid grid-cols-2 gap-4 mt-8">
-            {[
-              { icon: '🔥', label: 'Streak Tracking', desc: 'Never break the chain' },
-              { icon: '📊', label: 'Analytics', desc: 'See your patterns clearly' },
-              { icon: '🤖', label: 'AI Insights', desc: 'Know your weaknesses' },
-              { icon: '⚡', label: 'Daily Check-in', desc: 'One tap per habit' },
-            ].map((f) => (
-              <div key={f.label} className="bg-elevated border border-border rounded-xl p-4">
-                <div className="text-2xl mb-1">{f.icon}</div>
-                <div className="font-semibold text-white text-sm">{f.label}</div>
-                <div className="text-muted text-xs mt-0.5">{f.desc}</div>
-              </div>
-            ))}
-          </div>
         </div>
 
-        <p className="text-muted text-sm">Discipline is the bridge between goals and accomplishment.</p>
-      </div>
-
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-8 animate-slide-up">
-          <div className="lg:hidden flex items-center gap-2 mb-6">
-            <span className="text-2xl">🔥</span>
-            <span className="text-xl font-bold text-white">Momentum</span>
-          </div>
-
+        {/* Stats */}
+        <div className="relative z-10 flex gap-12">
           <div>
-            <h2 className="text-3xl font-bold text-white">
-              {tab === 'login' ? 'Welcome back' : 'Start your journey'}
-            </h2>
-            <p className="text-muted mt-2">
-              {tab === 'login'
-                ? 'Log in to see your progress'
-                : 'Create your account — it takes 30 seconds'}
-            </p>
+            <span className="font-label text-on-surface-variant uppercase tracking-widest text-[0.6875rem]">
+              STREAK REACHED
+            </span>
+            <div className="text-primary-container font-headline font-black text-4xl">412</div>
+          </div>
+          <div>
+            <span className="font-label text-on-surface-variant uppercase tracking-widest text-[0.6875rem]">
+              DATA POINTS
+            </span>
+            <div className="text-on-surface font-headline font-black text-4xl">1.2M</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Right panel — Auth form ── */}
+      <section className="flex-1 flex items-center justify-center p-6 md:p-16 relative">
+
+        <div className="w-full max-w-md">
+
+          {/* Mobile logo */}
+          <div className="md:hidden flex justify-center mb-12">
+            <span className="text-primary-container font-black text-2xl tracking-tighter">MOMENTUM</span>
           </div>
 
-          {/* Tabs */}
-          <div className="flex bg-elevated rounded-lg p-1">
-            {['login', 'signup'].map((t) => (
-              <button
-                key={t}
-                onClick={() => { setTab(t); setError(''); }}
-                className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${
-                  tab === t
-                    ? 'bg-accent text-white shadow'
-                    : 'text-muted hover:text-white'
-                }`}
+          {/* Glass card */}
+          <div className="obsidian-layer p-1 momentum-glow border border-white/5">
+
+            {/* Tab switcher — flat with border-b indicator */}
+            <div className="flex">
+              {[
+                { id: 'login', label: 'LOGIN' },
+                { id: 'signup', label: 'SIGN UP' },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => { setTab(id); setError(''); }}
+                  className={`flex-1 py-4 font-label text-[0.75rem] font-bold tracking-widest uppercase transition-all ${
+                    tab === id
+                      ? 'text-primary border-b-2 border-primary-container bg-surface-container-low'
+                      : 'text-on-surface-variant/50 hover:text-on-surface-variant hover:bg-surface-container-high'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-8 pt-10">
+
+              {/* Header */}
+              <div className="mb-10">
+                <h2 className="text-on-surface font-headline font-bold text-xl uppercase tracking-tighter">
+                  AUTHENTICATION REQUIRED
+                </h2>
+                <p className="text-on-surface-variant text-xs mt-1 uppercase tracking-widest font-medium opacity-60">
+                  ACCESSING KINETIC CORE PROTOCOLS
+                </p>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {tab === 'signup' && (
+                  <div className="space-y-1">
+                    <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
+                      IDENTIFIER
+                    </label>
+                    <div className="relative group">
+                      <input
+                        name="username"
+                        value={form.username}
+                        onChange={handleChange}
+                        placeholder="OPERATOR_HANDLE"
+                        required
+                        className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-container/40 text-on-surface py-4 px-4 placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider transition-all duration-200 outline-none"
+                      />
+                      <div className="absolute inset-0 border-l-2 border-transparent group-focus-within:border-primary-container pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
+                    IDENTIFIER
+                  </label>
+                  <div className="relative group">
+                    <input
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="OPERATOR@MOMENTUM.AI"
+                      required
+                      className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-container/40 text-on-surface py-4 px-4 placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider transition-all duration-200 outline-none"
+                    />
+                    <div className="absolute inset-0 border-l-2 border-transparent group-focus-within:border-primary-container pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block">
+                      SECRET KEY
+                    </label>
+                    <a href="#" className="font-label text-[0.625rem] uppercase tracking-widest text-primary hover:text-primary-container transition-colors">
+                      RECOVER
+                    </a>
+                  </div>
+                  <div className="relative group">
+                    <input
+                      name="password"
+                      type="password"
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder="••••••••••••"
+                      required
+                      minLength={6}
+                      className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-container/40 text-on-surface py-4 px-4 placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider transition-all duration-200 outline-none"
+                    />
+                    <div className="absolute inset-0 border-l-2 border-transparent group-focus-within:border-primary-container pointer-events-none" />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-error-container/20 border border-error/20 text-error text-xs px-4 py-3 font-mono uppercase tracking-wider">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary-container text-on-primary-container font-headline font-black py-5 tracking-widest uppercase text-sm hover:brightness-110 active:scale-[0.98] transition-all duration-200 ease-out-expo mt-4 disabled:opacity-50"
+                >
+                  {loading ? 'AUTHENTICATING…' : 'Initiate Protocol'}
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className="relative my-10 flex items-center">
+                <div className="flex-grow border-t border-white/5" />
+                <span className="flex-shrink mx-4 font-label text-[0.625rem] text-on-surface-variant/30 uppercase tracking-[0.3em]">
+                  OR EXTERNAL UPLINK
+                </span>
+                <div className="flex-grow border-t border-white/5" />
+              </div>
+
+              {/* Social login */}
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-3 py-3 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 transition-all duration-200 group"
+                  onClick={() => alert('OAuth integration requires backend configuration.')}
+                >
+                  <svg className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.909 3.292-2.09 4.213-1.217.956-3.053 1.957-5.75 1.957-4.428 0-8.01-3.591-8.01-8.01s3.582-8.01 8.01-8.01c2.39 0 4.14.94 5.43 2.15l2.32-2.32c-1.9-1.83-4.39-2.93-7.75-2.93-6.12 0-11.14 5.02-11.14 11.14s5.02 11.14 11.14 11.14c3.3 0 5.8-1.09 7.71-3.09 1.97-1.97 2.59-4.75 2.59-7.06 0-.46-.04-.92-.12-1.36h-10.27z" />
+                  </svg>
+                  <span className="font-label text-[0.6875rem] uppercase tracking-widest font-bold">GOOGLE</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-3 py-3 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 transition-all duration-200 group"
+                  onClick={() => alert('OAuth integration requires backend configuration.')}
+                >
+                  <svg className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+                  </svg>
+                  <span className="font-label text-[0.6875rem] uppercase tracking-widest font-bold">GITHUB</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 flex justify-center gap-8 px-4">
+            {['Privacy Node', 'Service Terms', 'System Status'].map(link => (
+              <a
+                key={link}
+                href="#"
+                className="font-label text-[0.625rem] text-on-surface-variant/40 hover:text-on-surface transition-colors uppercase tracking-[0.2em]"
               >
-                {t === 'login' ? 'Log In' : 'Sign Up'}
-              </button>
+                {link}
+              </a>
             ))}
           </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {tab === 'signup' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Username</label>
-                <input
-                  name="username"
-                  value={form.username}
-                  onChange={handleChange}
-                  placeholder="yourusername"
-                  required
-                  className="input"
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
-              <input
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                required
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
-              <input
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                className="input"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-base mt-2">
-              {loading
-                ? 'Loading...'
-                : tab === 'login'
-                ? 'Log In'
-                : 'Create Account'}
-            </button>
-          </form>
-
-          <p className="text-center text-muted text-sm">
-            {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <button
-              onClick={() => { setTab(tab === 'login' ? 'signup' : 'login'); setError(''); }}
-              className="text-accent hover:underline font-medium"
-            >
-              {tab === 'login' ? 'Sign up' : 'Log in'}
-            </button>
-          </p>
         </div>
+      </section>
+
+      {/* SVG decoration */}
+      <div className="absolute bottom-10 right-10 hidden lg:block opacity-20 pointer-events-none">
+        <svg width="200" height="200" viewBox="0 0 100 100" className="text-primary-container">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="0.1" strokeDasharray="2 2" />
+          <path d="M50 2 L50 98 M2 50 L98 50" stroke="currentColor" strokeWidth="0.05" />
+          <text x="52" y="10" fill="currentColor" className="font-label" style={{ fontSize: '2px' }}>MOMENTUM_OS v.4.0.1</text>
+        </svg>
       </div>
-    </div>
+    </main>
   );
 }
