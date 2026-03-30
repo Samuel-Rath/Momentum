@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/Auth';
+import OAuthCallback from './pages/OAuthCallback';
 import Dashboard from './pages/Dashboard';
 import Habits from './pages/Habits';
 import Analytics from './pages/Analytics';
@@ -42,6 +43,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               </PublicRoute>
             }
           />
+          <Route path="/auth/callback" element={<OAuthCallback />} />
           <Route
             path="/"
             element={

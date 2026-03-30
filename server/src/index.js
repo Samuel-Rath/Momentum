@@ -2,8 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const session = require('express-session');
+const passport = require('passport');
 
 const authRoutes = require('./routes/auth');
+const oauthRoutes = require('./routes/oauth'); // registers passport strategies
 const habitRoutes = require('./routes/habits');
 const logRoutes = require('./routes/logs');
 const analyticsRoutes = require('./routes/analytics');
@@ -20,10 +23,26 @@ app.use(cors({
   credentials: true,
 }));
 
+// Short-lived session — used only for OAuth state verification during the handshake
+app.use(session({
+  secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000, // 10 minutes
+  },
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Body parser — cap payload at 50kb to prevent abuse
 app.use(express.json({ limit: '50kb' }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', oauthRoutes);
 app.use('/api/habits', habitRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/analytics', analyticsRoutes);
