@@ -295,7 +295,7 @@ export default function AppShell() {
               {[
                 { icon: 'add_task', title: 'Creating Habits', body: 'Navigate to Habits and click "New Protocol" or the + button. Give your habit a name, choose a category, and set the frequency.' },
                 { icon: 'check_circle', title: 'Logging Daily', body: 'Visit the Dashboard each day. Tick the checkbox next to each habit to mark it complete. Use the chevron to add execution notes.' },
-                { icon: 'local_fire_department', title: 'Streaks &amp; Multiplier', body: 'Your streak increases each consecutive day you complete a habit. The Streak Multiplier (1 + streak × 0.08) compounds your performance score.' },
+                { icon: 'local_fire_department', title: 'Streaks & Multiplier', body: 'Your streak increases each consecutive day you complete a habit. The Streak Multiplier (1 + streak × 0.08) compounds your performance score.' },
                 { icon: 'schedule', title: 'Daily Reset', body: 'The day resets at midnight AEST (Australian Eastern Standard Time). A countdown timer is shown on the Dashboard.' },
                 { icon: 'insights', title: 'Analytics', body: 'Track your consistency heatmap, completion rates, and precision insights on the Analytics page. Use the Guide section for further detail.' },
                 { icon: 'delete_forever', title: 'Removing Habits', body: 'Open the Habits page, hover over a card, and click the delete icon. Confirm the prompt to permanently remove the protocol.' },
@@ -304,13 +304,13 @@ export default function AppShell() {
                   <span className="material-symbols-outlined text-primary shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1", fontSize: '20px' }}>{item.icon}</span>
                   <div>
                     <p className="text-[0.6875rem] font-black uppercase tracking-widest mb-1">{item.title}</p>
-                    <p className="text-[0.6875rem] text-on-surface-variant opacity-70 leading-relaxed" dangerouslySetInnerHTML={{ __html: item.body }} />
+                    <p className="text-[0.6875rem] text-on-surface-variant opacity-70 leading-relaxed">{item.body}</p>
                   </div>
                 </div>
               ))}
 
               <div className="bg-surface-container-low p-4 border-l-2 border-secondary/30">
-                <p className="text-[0.625rem] font-black text-secondary uppercase tracking-widest mb-1">Need More Help?</p>
+                <p className="text-[0.625rem] font-black text-secondary uppercase tracking-widest mb-1">Need More Help</p>
                 <p className="text-[0.6875rem] text-on-surface-variant opacity-70 leading-relaxed">
                   Report issues or request features on GitHub. Reach out via your account's registered email address for account-related queries.
                 </p>
