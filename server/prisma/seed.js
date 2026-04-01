@@ -2,6 +2,11 @@ require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('ERROR: seed.js must not be run in production — it creates a known-password demo account.');
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 async function main() {

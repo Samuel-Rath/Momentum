@@ -60,7 +60,7 @@ export default function Analytics() {
   const completionBars = completion.slice(-7);
 
   return (
-    <div className="pt-6 sm:pt-10 lg:pt-24 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 min-h-screen">
+    <div className="pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12">
 
       {/* Header */}
       <section className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">

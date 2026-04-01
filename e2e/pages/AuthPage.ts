@@ -19,7 +19,7 @@ export class AuthPage {
     this.emailInput = page.locator('input[name="email"]');
     this.passwordInput = page.locator('input[name="password"]');
     this.usernameInput = page.locator('input[name="username"]');
-    this.submitButton = page.getByRole('button', { name: /initiate protocol/i });
+    this.submitButton = page.locator('form button[type="submit"]');
     this.errorMessage = page.locator('.bg-error-container\\/20');
     this.googleButton = page.getByRole('button', { name: /google/i });
     this.githubButton = page.getByRole('button', { name: /github/i });

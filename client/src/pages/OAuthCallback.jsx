@@ -9,7 +9,7 @@ export default function OAuthCallback() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.hash.slice(1));
     const token = params.get('token');
 
     if (!token) {

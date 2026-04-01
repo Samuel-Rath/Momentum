@@ -133,10 +133,10 @@ export default function AuthPage() {
               {/* Header */}
               <div className="mb-10">
                 <h2 className="text-on-surface font-headline font-bold text-xl uppercase tracking-tighter">
-                  AUTHENTICATION REQUIRED
+                  {tab === 'login' ? 'WELCOME BACK' : 'CREATE ACCOUNT'}
                 </h2>
                 <p className="text-on-surface-variant text-xs mt-1 uppercase tracking-widest font-medium opacity-60">
-                  ACCESSING KINETIC CORE PROTOCOLS
+                  {tab === 'login' ? 'SIGN IN TO YOUR ACCOUNT' : 'START TRACKING YOUR HABITS'}
                 </p>
               </div>
 
@@ -145,14 +145,14 @@ export default function AuthPage() {
                 {tab === 'signup' && (
                   <div className="space-y-1">
                     <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
-                      IDENTIFIER
+                      USERNAME
                     </label>
                     <div className="relative group">
                       <input
                         name="username"
                         value={form.username}
                         onChange={handleChange}
-                        placeholder="OPERATOR_HANDLE"
+                        placeholder="your_username"
                         required
                         className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-container/40 text-on-surface py-4 px-4 placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider transition-all duration-200 outline-none"
                       />
@@ -163,7 +163,7 @@ export default function AuthPage() {
 
                 <div className="space-y-1">
                   <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
-                    IDENTIFIER
+                    EMAIL
                   </label>
                   <div className="relative group">
                     <input
@@ -171,7 +171,7 @@ export default function AuthPage() {
                       type="email"
                       value={form.email}
                       onChange={handleChange}
-                      placeholder="OPERATOR@MOMENTUM.AI"
+                      placeholder="you@example.com"
                       required
                       className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-container/40 text-on-surface py-4 px-4 placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider transition-all duration-200 outline-none"
                     />
@@ -182,10 +182,10 @@ export default function AuthPage() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center px-1">
                     <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block">
-                      SECRET KEY
+                      PASSWORD
                     </label>
                     <a href="#" className="font-label text-[0.625rem] uppercase tracking-widest text-primary hover:text-primary-container transition-colors">
-                      RECOVER
+                      FORGOT PASSWORD
                     </a>
                   </div>
                   <div className="relative group">
@@ -214,7 +214,9 @@ export default function AuthPage() {
                   disabled={loading}
                   className="w-full bg-primary-container text-on-primary-container font-headline font-black py-5 tracking-widest uppercase text-sm hover:brightness-110 active:scale-[0.98] transition-all duration-200 ease-out-expo mt-4 disabled:opacity-50"
                 >
-                  {loading ? 'AUTHENTICATING…' : 'Initiate Protocol'}
+                  {loading
+                    ? (tab === 'login' ? 'SIGNING IN…' : 'CREATING ACCOUNT…')
+                    : (tab === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT')}
                 </button>
               </form>
 
@@ -222,7 +224,7 @@ export default function AuthPage() {
               <div className="relative my-10 flex items-center">
                 <div className="flex-grow border-t border-white/5" />
                 <span className="flex-shrink mx-4 font-label text-[0.625rem] text-on-surface-variant/30 uppercase tracking-[0.3em]">
-                  OR EXTERNAL UPLINK
+                  OR CONTINUE WITH
                 </span>
                 <div className="flex-grow border-t border-white/5" />
               </div>
@@ -254,8 +256,8 @@ export default function AuthPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 flex justify-center gap-8 px-4">
-            {['Privacy Node', 'Service Terms', 'System Status'].map(link => (
+          <div className="mt-8 flex flex-wrap justify-center gap-4 sm:gap-8 px-4">
+            {['Privacy Policy', 'Terms of Service', 'System Status'].map(link => (
               <a
                 key={link}
                 href="#"

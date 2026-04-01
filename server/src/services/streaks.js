@@ -1,9 +1,12 @@
 /**
- * Given an array of HabitLog objects (with date + completed fields),
- * compute the current and longest streaks.
+ * Compute current and longest completion streaks from a habit's log history.
+ *
+ * @param {Array<{ date: Date|string, completed: boolean }>} logs
+ * @returns {{ currentStreak: number, longestStreak: number }}
+ *   currentStreak — consecutive days ending on today or yesterday (0 if broken)
+ *   longestStreak — longest consecutive run ever recorded
  */
 function computeStreaks(logs) {
-  // Sort ascending by date
   const sorted = [...logs]
     .filter((l) => l.completed)
     .map((l) => new Date(l.date).toISOString().split('T')[0])
@@ -11,7 +14,6 @@ function computeStreaks(logs) {
 
   if (sorted.length === 0) return { currentStreak: 0, longestStreak: 0 };
 
-  // Deduplicate dates
   const dates = [...new Set(sorted)];
 
   let longestStreak = 1;

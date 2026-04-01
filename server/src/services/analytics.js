@@ -29,7 +29,8 @@ function completionByPeriod(logs, period = 'week') {
 
 /**
  * Returns last 90 days of completion data suitable for a heatmap.
- * Each entry: { date, completed: boolean }
+ * Each entry: { date: string, rate: number | null }
+ *   rate is null when no habits were tracked that day (no denominator).
  */
 function heatmapData(logs) {
   const result = [];

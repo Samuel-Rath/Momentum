@@ -21,7 +21,6 @@ async function findOrCreateOAuthUser({ email, displayName }) {
   const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (existing) return existing;
 
-  // Build a unique username derived from the display name
   const base = displayName
     ? displayName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'user'
     : 'user';
@@ -31,14 +30,22 @@ async function findOrCreateOAuthUser({ email, displayName }) {
     username = `${base}${n++}`;
   }
 
-  return prisma.user.create({
-    data: {
-      username,
-      email: email.toLowerCase(),
-      // Random value — OAuth users cannot sign in with a password
-      password: crypto.randomBytes(32).toString('hex'),
-    },
-  });
+  // Retry loop handles the TOCTOU race between uniqueness check and insert
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await prisma.user.create({
+        data: {
+          username: attempt === 0 ? username : `${username}${attempt}`,
+          email: email.toLowerCase(),
+          // Random value — OAuth users cannot sign in with a password
+          password: crypto.randomBytes(32).toString('hex'),
+        },
+      });
+    } catch (err) {
+      // P2002 = unique constraint violation — username taken by concurrent request
+      if (err.code !== 'P2002' || attempt === 4) throw err;
+    }
+  }
 }
 
 // ── Strategy registration (skipped if env vars are absent) ──
@@ -110,11 +117,12 @@ router.get('/google/callback',
     failureRedirect: `${CLIENT_URL}/auth?error=google_failed`,
   }),
   (req, res) => res.redirect(
-    `${CLIENT_URL}/auth/callback?token=${encodeURIComponent(signToken(req.user.id))}`
+    `${CLIENT_URL}/auth/callback#token=${encodeURIComponent(signToken(req.user.id))}`
   )
 );
 
 // ── GitHub ──
+
 router.get('/github',
   notConfigured('github'),
   passport.authenticate('github', { scope: ['user:email'] })
@@ -126,7 +134,7 @@ router.get('/github/callback',
     failureRedirect: `${CLIENT_URL}/auth?error=github_failed`,
   }),
   (req, res) => res.redirect(
-    `${CLIENT_URL}/auth/callback?token=${encodeURIComponent(signToken(req.user.id))}`
+    `${CLIENT_URL}/auth/callback#token=${encodeURIComponent(signToken(req.user.id))}`
   )
 );
 

@@ -14,7 +14,7 @@ test.describe('Authentication', () => {
 
     await expect(auth.loginTab).toBeVisible();
     await expect(auth.signupTab).toBeVisible();
-    await expect(page.getByText('AUTHENTICATION REQUIRED')).toBeVisible();
+    await expect(page.getByText('WELCOME BACK')).toBeVisible();
     await expect(auth.submitButton).toBeVisible();
   });
 
@@ -52,7 +52,7 @@ test.describe('Authentication', () => {
     await auth.passwordInput.fill('password123');
     await auth.submitButton.click();
 
-    await expect(page.getByText('AUTHENTICATING…')).toBeVisible();
+    await expect(page.getByText('SIGNING IN…')).toBeVisible();
   });
 
   test('successful login redirects to dashboard', async ({ page }) => {

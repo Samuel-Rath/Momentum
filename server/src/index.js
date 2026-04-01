@@ -5,11 +5,22 @@ const helmet = require('helmet');
 const session = require('express-session');
 const passport = require('passport');
 
+const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const oauthRoutes = require('./routes/oauth'); // registers passport strategies
 const habitRoutes = require('./routes/habits');
 const logRoutes = require('./routes/logs');
 const analyticsRoutes = require('./routes/analytics');
+
+// Fail fast if required secrets are missing
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set.');
+  process.exit(1);
+}
+if (!process.env.SESSION_SECRET) {
+  console.error('FATAL: SESSION_SECRET environment variable is not set. Set it independently from JWT_SECRET.');
+  process.exit(1);
+}
 
 const app = express();
 
@@ -25,7 +36,7 @@ app.use(cors({
 
 // Short-lived session — used only for OAuth state verification during the handshake
 app.use(session({
-  secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -41,11 +52,20 @@ app.use(passport.session());
 // Body parser — cap payload at 50kb to prevent abuse
 app.use(express.json({ limit: '50kb' }));
 
+// Rate limit for authenticated API endpoints — 300 requests per minute per IP
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  message: { error: 'Too many requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', oauthRoutes);
-app.use('/api/habits', habitRoutes);
-app.use('/api/logs', logRoutes);
-app.use('/api/analytics', analyticsRoutes);
+app.use('/api/habits', apiLimiter, habitRoutes);
+app.use('/api/logs', apiLimiter, logRoutes);
+app.use('/api/analytics', apiLimiter, analyticsRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

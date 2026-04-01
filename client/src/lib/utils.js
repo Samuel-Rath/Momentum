@@ -3,6 +3,8 @@ export function formatDate(date = new Date()) {
 }
 
 export function formatDisplayDate(dateStr) {
+  // Appending T00:00:00 (no Z) keeps the Date in local time so the displayed
+  // weekday/month match the stored date string rather than shifting by UTC offset.
   const date = new Date(dateStr + 'T00:00:00');
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }

@@ -42,7 +42,7 @@ export default function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen overflow-hidden bg-background flex">
 
       {/* Mobile overlay */}
       {mobileOpen && (
@@ -185,7 +185,7 @@ export default function AppShell() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 pt-16 min-h-screen animate-fade-in">
+        <main className="flex-1 pt-16 overflow-y-auto animate-fade-in">
           <Outlet />
         </main>
       </div>

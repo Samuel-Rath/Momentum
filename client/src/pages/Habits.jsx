@@ -66,7 +66,7 @@ export default function Habits() {
   const categoryCount = new Set(habits.map(h => h.category)).size;
 
   return (
-    <div className="pt-6 sm:pt-10 lg:pt-24 px-4 sm:px-6 lg:px-12 pb-8 sm:pb-12 min-h-screen">
+    <div className="pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12">
 
       {/* Header */}
       <section className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 sm:mb-12 gap-6">
@@ -190,7 +190,7 @@ export default function Habits() {
                 <div className="w-full h-1 bg-surface-container-highest">
                   <div className="h-full bg-secondary" style={{ width: '65%' }} />
                 </div>
-                <div className="flex items-center gap-1 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 mt-4 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   <button onClick={() => openEdit(habits[1])} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all">
                     <Pencil size={14} />
                   </button>
@@ -221,7 +221,7 @@ export default function Habits() {
                 <span className="text-3xl font-black">{habit.icon || '⚡'}</span>
                 <span className="text-[0.625rem] font-bold uppercase opacity-40">{habit.category}</span>
               </div>
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => openEdit(habit)}
                   className="flex-1 border border-[#35343a] text-on-surface-variant py-2 text-[0.625rem] font-black uppercase tracking-widest hover:bg-primary-container hover:text-on-primary-container hover:border-primary-container transition-all duration-200 text-center min-h-[44px]"
@@ -268,7 +268,7 @@ export default function Habits() {
                 <h4 className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">{dormant.name}</h4>
                 <button
                   onClick={openCreate}
-                  className="text-[0.625rem] font-black text-primary opacity-0 group-hover:opacity-100 transition-opacity min-h-[44px] flex items-center"
+                  className="text-[0.625rem] font-black text-primary sm:opacity-0 sm:group-hover:opacity-100 transition-opacity min-h-[44px] flex items-center"
                 >
                   REACTIVATE
                 </button>

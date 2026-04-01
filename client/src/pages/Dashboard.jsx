@@ -105,7 +105,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="pt-6 sm:pt-10 lg:pt-24 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
+    <div className="pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 max-w-7xl mx-auto">
 
       {/* Stats row — 12-col bento */}
       <div className="grid grid-cols-12 gap-4 sm:gap-6 mb-8 sm:mb-12">
