@@ -158,8 +158,9 @@ export default function AppShell() {
 
           {/* Search */}
           <div className="flex items-center gap-3 flex-1">
-            <span className="material-symbols-outlined text-on-surface-variant text-lg hidden sm:block">search</span>
+            <span className="material-symbols-outlined text-on-surface-variant text-lg hidden sm:block" aria-hidden="true">search</span>
             <input
+              aria-label="Search"
               className="bg-transparent border-none text-[0.75rem] font-bold uppercase tracking-widest focus:ring-0 focus:outline-none text-on-surface-variant w-28 sm:w-48 lg:w-64 placeholder:text-[#35343a]"
               placeholder="COMMAND SEARCH..."
               readOnly
@@ -174,12 +175,12 @@ export default function AppShell() {
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
             </div>
-            <button className="text-on-surface-variant hover:text-primary transition-colors relative min-h-[44px] min-w-[44px] flex items-center justify-center">
-              <span className="material-symbols-outlined">notifications</span>
+            <button aria-label="Notifications" className="text-on-surface-variant hover:text-primary transition-colors relative min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <span className="material-symbols-outlined" aria-hidden="true">notifications</span>
               <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-surface" />
             </button>
-            <button className="text-on-surface-variant hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
-              <span className="material-symbols-outlined">account_circle</span>
+            <button aria-label="Account settings" onClick={() => setSettingsOpen(true)} className="text-on-surface-variant hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <span className="material-symbols-outlined" aria-hidden="true">account_circle</span>
             </button>
           </div>
         </header>

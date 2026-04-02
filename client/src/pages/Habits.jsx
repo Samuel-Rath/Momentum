@@ -335,6 +335,8 @@ export default function Habits() {
                         key={c}
                         type="button"
                         onClick={() => setForm(f => ({ ...f, color: c }))}
+                        aria-label={`Select color ${c}`}
+                        aria-pressed={form.color === c}
                         className={cn('w-7 h-7 transition-all duration-150', form.color === c ? 'ring-2 ring-on-surface ring-offset-2 ring-offset-surface-container-high scale-110' : 'hover:scale-105')}
                         style={{ background: c }}
                       />

@@ -259,6 +259,7 @@ export default function Dashboard() {
                         <input
                           className="input text-xs py-2"
                           placeholder="Log execution notes…"
+                          aria-label={`Execution notes for ${habit.name}`}
                           value={noteInputs[habit.id] ?? habit.log?.notes ?? ''}
                           onChange={e => setNoteInputs(p => ({ ...p, [habit.id]: e.target.value }))}
                           onKeyDown={e => e.key === 'Enter' && saveNote(habit)}

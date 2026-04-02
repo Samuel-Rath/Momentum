@@ -6,6 +6,7 @@ export default function AuthPage() {
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
   // Show error passed back from OAuth failure redirect
@@ -144,12 +145,14 @@ export default function AuthPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {tab === 'signup' && (
                   <div className="space-y-1">
-                    <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
+                    <label htmlFor="username" className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
                       USERNAME
                     </label>
                     <div className="relative group">
                       <input
+                        id="username"
                         name="username"
+                        autoComplete="username"
                         value={form.username}
                         onChange={handleChange}
                         placeholder="your_username"
@@ -162,13 +165,15 @@ export default function AuthPage() {
                 )}
 
                 <div className="space-y-1">
-                  <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
+                  <label htmlFor="email" className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
                     EMAIL
                   </label>
                   <div className="relative group">
                     <input
+                      id="email"
                       name="email"
                       type="email"
+                      autoComplete="email"
                       value={form.email}
                       onChange={handleChange}
                       placeholder="you@example.com"
@@ -181,30 +186,47 @@ export default function AuthPage() {
 
                 <div className="space-y-1">
                   <div className="flex justify-between items-center px-1">
-                    <label className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block">
+                    <label htmlFor="password" className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block">
                       PASSWORD
                     </label>
-                    <a href="#" className="font-label text-[0.625rem] uppercase tracking-widest text-primary hover:text-primary-container transition-colors">
-                      FORGOT PASSWORD
-                    </a>
+                    {tab === 'login' && (
+                      <button
+                        type="button"
+                        className="font-label text-[0.625rem] uppercase tracking-widest text-primary hover:text-primary-container transition-colors"
+                      >
+                        FORGOT PASSWORD
+                      </button>
+                    )}
                   </div>
                   <div className="relative group">
                     <input
+                      id="password"
                       name="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
                       value={form.password}
                       onChange={handleChange}
                       placeholder="••••••••••••"
                       required
                       minLength={6}
-                      className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-container/40 text-on-surface py-4 px-4 placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider transition-all duration-200 outline-none"
+                      className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-container/40 text-on-surface py-4 pl-4 pr-12 placeholder:text-on-surface-variant/20 font-label text-xs tracking-wider transition-all duration-200 outline-none"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(p => !p)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-0 top-0 h-full px-3 text-on-surface-variant/40 hover:text-on-surface-variant transition-colors flex items-center justify-center min-w-[44px]"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        {showPassword ? 'visibility_off' : 'visibility'}
+                      </span>
+                    </button>
                     <div className="absolute inset-0 border-l-2 border-transparent group-focus-within:border-primary-container pointer-events-none" />
                   </div>
                 </div>
 
                 {error && (
-                  <div className="bg-error-container/20 border border-error/20 text-error text-xs px-4 py-3 font-mono uppercase tracking-wider">
+                  <div role="alert" className="bg-error-container/20 border border-error/20 text-error text-xs px-4 py-3 font-mono uppercase tracking-wider">
                     {error}
                   </div>
                 )}
@@ -233,20 +255,22 @@ export default function AuthPage() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
-                  className="flex items-center justify-center gap-3 py-3 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 transition-all duration-200 group"
+                  aria-label="Continue with Google"
+                  className="flex items-center justify-center gap-3 min-h-[44px] py-3 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 transition-all duration-200 group"
                   onClick={() => { window.location.href = '/api/auth/google'; }}
                 >
-                  <svg className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.909 3.292-2.09 4.213-1.217.956-3.053 1.957-5.75 1.957-4.428 0-8.01-3.591-8.01-8.01s3.582-8.01 8.01-8.01c2.39 0 4.14.94 5.43 2.15l2.32-2.32c-1.9-1.83-4.39-2.93-7.75-2.93-6.12 0-11.14 5.02-11.14 11.14s5.02 11.14 11.14 11.14c3.3 0 5.8-1.09 7.71-3.09 1.97-1.97 2.59-4.75 2.59-7.06 0-.46-.04-.92-.12-1.36h-10.27z" />
                   </svg>
                   <span className="font-label text-[0.6875rem] uppercase tracking-widest font-bold">GOOGLE</span>
                 </button>
                 <button
                   type="button"
-                  className="flex items-center justify-center gap-3 py-3 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 transition-all duration-200 group"
+                  aria-label="Continue with GitHub"
+                  className="flex items-center justify-center gap-3 min-h-[44px] py-3 bg-surface-container-high hover:bg-surface-container-highest border border-white/5 transition-all duration-200 group"
                   onClick={() => { window.location.href = '/api/auth/github'; }}
                 >
-                  <svg className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-on-surface-variant group-hover:text-on-surface shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
                   </svg>
                   <span className="font-label text-[0.6875rem] uppercase tracking-widest font-bold">GITHUB</span>
