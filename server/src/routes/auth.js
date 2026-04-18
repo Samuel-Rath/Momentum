@@ -96,6 +96,30 @@ router.get('/me', authMiddleware, async (req, res, next) => {
   }
 });
 
+// PATCH /api/auth/me
+router.patch('/me', authMiddleware, async (req, res, next) => {
+  try {
+    const { username } = req.body;
+    if (typeof username !== 'string' || username.trim().length < 2 || username.trim().length > 32) {
+      return res.status(400).json({ error: 'Username must be 2–32 characters' });
+    }
+    const trimmed = username.trim();
+    const existing = await prisma.user.findFirst({
+      where: { username: trimmed, NOT: { id: req.userId } },
+    });
+    if (existing) return res.status(409).json({ error: 'Username already in use' });
+
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: { username: trimmed },
+      select: { id: true, username: true, email: true, createdAt: true },
+    });
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // DELETE /api/auth/account
 router.delete('/account', authMiddleware, async (req, res, next) => {
   try {

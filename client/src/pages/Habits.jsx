@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { habitsApi } from '../lib/api';
 import { CATEGORIES, HABIT_COLORS, FREQUENCIES, cn } from '../lib/utils';
 import { Pencil, Trash2, X } from 'lucide-react';
@@ -9,6 +9,9 @@ export default function Habits() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deletingInFlight, setDeletingInFlight] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const defaultForm = { name: '', category: 'health', frequency: 'daily', color: HABIT_COLORS[0], icon: '⚡' };
   const [form, setForm] = useState(defaultForm);
@@ -21,6 +24,15 @@ export default function Habits() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  // Auto-open create modal when navigated with ?new=1
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      openCreate();
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   function openCreate() { setEditing(null); setForm(defaultForm); setError(''); setModalOpen(true); }
 
@@ -48,10 +60,18 @@ export default function Habits() {
     } finally { setSaving(false); }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Remove this protocol?')) return;
-    await habitsApi.remove(id);
-    setHabits(p => p.filter(h => h.id !== id));
+  async function confirmDelete() {
+    if (!deleting) return;
+    setDeletingInFlight(true);
+    try {
+      await habitsApi.remove(deleting.id);
+      setHabits(p => p.filter(h => h.id !== deleting.id));
+      setDeleting(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingInFlight(false);
+    }
   }
 
   if (loading) {
@@ -66,7 +86,7 @@ export default function Habits() {
   const categoryCount = new Set(habits.map(h => h.category)).size;
 
   return (
-    <div className="pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12">
+    <div className="pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 pb-28 sm:pb-32">
 
       {/* Header */}
       <section className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 sm:mb-12 gap-6">
@@ -153,7 +173,7 @@ export default function Habits() {
                   <button onClick={() => openEdit(habits[0])} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={() => handleDelete(habits[0].id)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 transition-all">
+                  <button onClick={() => setDeleting(habits[0])} aria-label="Delete habit" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 transition-all">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -194,7 +214,7 @@ export default function Habits() {
                   <button onClick={() => openEdit(habits[1])} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={() => handleDelete(habits[1].id)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-error transition-all">
+                  <button onClick={() => setDeleting(habits[1])} aria-label="Delete habit" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-error transition-all">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -229,7 +249,8 @@ export default function Habits() {
                   EDIT
                 </button>
                 <button
-                  onClick={() => handleDelete(habit.id)}
+                  onClick={() => setDeleting(habit)}
+                  aria-label="Delete habit"
                   className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 transition-all"
                 >
                   <Trash2 size={14} />
@@ -250,36 +271,6 @@ export default function Habits() {
           </div>
         </section>
       )}
-
-      {/* Dormant Protocols */}
-      <section className="mt-6 sm:mt-8">
-        <div className="flex items-center gap-4 mb-6 sm:mb-8">
-          <h2 className="text-[0.75rem] font-bold uppercase tracking-[0.2em] text-on-surface-variant opacity-40 whitespace-nowrap">Dormant Protocols</h2>
-          <div className="flex-1 h-px bg-[#35343a]/30" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {[
-            { name: 'Cold Exposure', lastActive: '142 Days Ago', peak: 12 },
-            { name: 'Sugar-Free Protocol', lastActive: '12 Days Ago', peak: 45 },
-            { name: 'Fast Feedback Loops', lastActive: '204 Days Ago', peak: 8 },
-          ].map(dormant => (
-            <div key={dormant.name} className="bg-surface-container-low/40 p-5 sm:p-6 border border-[#35343a]/10 group hover:bg-surface-container-low transition-all duration-300">
-              <div className="flex justify-between items-start mb-4">
-                <h4 className="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">{dormant.name}</h4>
-                <button
-                  onClick={openCreate}
-                  className="text-[0.625rem] font-black text-primary sm:opacity-0 sm:group-hover:opacity-100 transition-opacity min-h-[44px] flex items-center"
-                >
-                  REACTIVATE
-                </button>
-              </div>
-              <div className="text-[0.625rem] font-medium opacity-40 uppercase tracking-tighter">
-                Last Active: {dormant.lastActive} • Peak Streak: {dormant.peak}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Modal */}
       {modalOpen && (
@@ -319,13 +310,17 @@ export default function Habits() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 mb-2 px-1">Symbol</label>
+                  <label htmlFor="habit-icon" className="block text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 mb-2 px-1">Symbol</label>
                   <input
+                    id="habit-icon"
                     className="input text-2xl text-center"
                     value={form.icon}
                     onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
                     maxLength={2}
+                    aria-describedby="habit-icon-hint"
+                    placeholder="⚡"
                   />
+                  <p id="habit-icon-hint" className="text-[0.625rem] text-on-surface-variant/40 mt-1 px-1 uppercase tracking-widest">Emoji or 1–2 chars</p>
                 </div>
                 <div>
                   <label className="block text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 mb-2 px-1">Accent</label>
@@ -337,6 +332,7 @@ export default function Habits() {
                         onClick={() => setForm(f => ({ ...f, color: c }))}
                         aria-label={`Select color ${c}`}
                         aria-pressed={form.color === c}
+                        title={c}
                         className={cn('w-7 h-7 transition-all duration-150', form.color === c ? 'ring-2 ring-on-surface ring-offset-2 ring-offset-surface-container-high scale-110' : 'hover:scale-105')}
                         style={{ background: c }}
                       />
@@ -394,6 +390,44 @@ export default function Habits() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleting && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => !deletingInFlight && setDeleting(null)}>
+          <div
+            role="alertdialog"
+            aria-labelledby="delete-title"
+            aria-describedby="delete-desc"
+            className="w-full max-w-sm bg-[#1b1b20] border border-error/20 shadow-2xl animate-slide-up"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 py-5 border-b border-white/5">
+              <h2 id="delete-title" className="font-bold text-lg text-on-surface uppercase tracking-tighter">Delete Habit</h2>
+              <p id="delete-desc" className="text-on-surface-variant text-xs mt-1 opacity-70 leading-relaxed">
+                Permanently archive <span className="text-on-surface font-bold">{deleting.name}</span>? Its history will stop counting toward your streaks.
+              </p>
+            </div>
+            <div className="px-6 py-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={deletingInFlight}
+                className="btn-ghost bg-surface-container-highest flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deletingInFlight}
+                className="flex-1 bg-error text-on-error font-black uppercase tracking-widest text-[0.75rem] py-3 hover:brightness-110 transition-all disabled:opacity-50"
+              >
+                {deletingInFlight ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

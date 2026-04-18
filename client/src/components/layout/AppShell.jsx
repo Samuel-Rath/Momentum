@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Menu, X } from 'lucide-react';
 import { authApi } from '../../lib/api';
 
+const NEW_HABIT_LINK = '/habits?new=1';
+
 const NAV_ITEMS = [
   { to: '/', icon: 'dashboard', label: 'Dashboard', end: true },
   { to: '/habits', icon: 'event_repeat', label: 'Habits' },
@@ -11,13 +13,19 @@ const NAV_ITEMS = [
 ];
 
 export default function AppShell() {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileSaved, setProfileSaved] = useState(false);
 
   function handleLogout() {
     logout();
@@ -36,9 +44,34 @@ export default function AppShell() {
     }
   }
 
+  function openProfileEdit() {
+    setUsernameDraft(user?.username || '');
+    setProfileError('');
+    setEditingName(true);
+  }
+
+  async function saveProfile() {
+    setProfileSaving(true);
+    setProfileError('');
+    try {
+      const res = await authApi.updateProfile({ username: usernameDraft });
+      setUser(res.data);
+      setEditingName(false);
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2000);
+    } catch (err) {
+      setProfileError(err.response?.data?.error || 'Failed to update');
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
   function closeSettings() {
     setSettingsOpen(false);
     setDeleteConfirm(false);
+    setLogoutConfirm(false);
+    setEditingName(false);
+    setProfileError('');
   }
 
   return (
@@ -98,7 +131,7 @@ export default function AppShell() {
         {/* NEW HABIT button */}
         <div className="px-4 mb-8">
           <Link
-            to="/habits"
+            to={NEW_HABIT_LINK}
             onClick={() => setMobileOpen(false)}
             className="block w-full bg-primary-container text-on-primary-container font-black py-3 text-[0.6875rem] tracking-widest uppercase text-center hover:brightness-110 transition-all active:scale-95"
           >
@@ -150,36 +183,28 @@ export default function AppShell() {
         <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 z-40 bg-[#131318]/60 backdrop-blur-xl flex justify-between items-center px-4 sm:px-8 border-b border-[#35343a]/10">
           {/* Mobile hamburger */}
           <button
-            className="lg:hidden text-on-surface-variant hover:text-on-surface p-1 mr-3 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="lg:hidden text-on-surface-variant hover:text-on-surface p-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
           >
             <Menu size={20} />
           </button>
 
-          {/* Search */}
-          <div className="flex items-center gap-3 flex-1">
-            <span className="material-symbols-outlined text-on-surface-variant text-lg hidden sm:block" aria-hidden="true">search</span>
-            <input
-              aria-label="Search"
-              className="bg-transparent border-none text-[0.75rem] font-bold uppercase tracking-widest focus:ring-0 focus:outline-none text-on-surface-variant w-28 sm:w-48 lg:w-64 placeholder:text-[#35343a]"
-              placeholder="COMMAND SEARCH..."
-              readOnly
-            />
+          {/* Brand mark (mobile only — desktop has sidebar logo) */}
+          <div className="lg:hidden flex items-center gap-2">
+            <span className="text-[0.75rem] font-black uppercase tracking-widest text-primary-container">Momentum</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
           </div>
 
-          {/* Right icons */}
+          <div className="hidden lg:block flex-1" />
+
+          {/* Right controls */}
           <div className="flex items-center gap-3 sm:gap-5">
-            <div className="hidden sm:flex items-center gap-1">
-              <span className="text-[0.75rem] font-bold uppercase tracking-widest text-primary-container">
-                Momentum
-              </span>
-              <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
-            </div>
-            <button aria-label="Notifications" className="text-on-surface-variant hover:text-primary transition-colors relative min-h-[44px] min-w-[44px] flex items-center justify-center">
-              <span className="material-symbols-outlined" aria-hidden="true">notifications</span>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-surface" />
-            </button>
-            <button aria-label="Account settings" onClick={() => setSettingsOpen(true)} className="text-on-surface-variant hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <button
+              aria-label="Account settings"
+              onClick={() => setSettingsOpen(true)}
+              className="text-on-surface-variant hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
               <span className="material-symbols-outlined" aria-hidden="true">account_circle</span>
             </button>
           </div>
@@ -193,12 +218,14 @@ export default function AppShell() {
 
       {/* FAB */}
       <Link
-        to="/habits"
+        to={NEW_HABIT_LINK}
+        aria-label="New habit"
         className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 w-14 h-14 sm:w-16 sm:h-16 bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.06)] z-50 hover:brightness-110 active:scale-95 transition-all duration-200 ease-out-expo group"
       >
         <span
           className="material-symbols-outlined text-2xl sm:text-3xl font-bold group-hover:rotate-90 transition-transform duration-300"
           style={{ fontVariationSettings: "'wght' 700" }}
+          aria-hidden="true"
         >
           add
         </span>
@@ -220,25 +247,103 @@ export default function AppShell() {
 
             <div className="px-6 py-5 space-y-6">
               {/* Profile */}
-              <div className="flex items-center gap-4 p-4 bg-surface-container-low">
-                <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-black text-lg shrink-0">
-                  {user?.username?.[0]?.toUpperCase() || 'U'}
+              <div className="p-4 bg-surface-container-low">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-black text-lg shrink-0">
+                    {user?.username?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {editingName ? (
+                      <div className="space-y-2">
+                        <label htmlFor="profile-username" className="block text-[0.625rem] font-bold uppercase tracking-widest text-on-surface-variant/60">Username</label>
+                        <input
+                          id="profile-username"
+                          autoFocus
+                          value={usernameDraft}
+                          onChange={e => { setUsernameDraft(e.target.value); setProfileError(''); }}
+                          minLength={2}
+                          maxLength={32}
+                          className="w-full bg-surface-container-highest px-3 py-2 text-sm font-bold tracking-tight outline-none focus:ring-1 focus:ring-primary-container/40"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-sm uppercase tracking-tight truncate">{user?.username || 'USER'}</p>
+                          {profileSaved && (
+                            <span className="text-[0.625rem] font-bold text-tertiary uppercase tracking-widest" role="status">Saved</span>
+                          )}
+                        </div>
+                        <p className="text-[0.6875rem] text-on-surface-variant opacity-60 truncate">{user?.email || ''}</p>
+                      </>
+                    )}
+                  </div>
+                  {!editingName && (
+                    <button
+                      onClick={openProfileEdit}
+                      aria-label="Edit username"
+                      className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }} aria-hidden="true">edit</span>
+                    </button>
+                  )}
                 </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-sm uppercase tracking-tight truncate">{user?.username || 'OPERATOR'}</p>
-                  <p className="text-[0.6875rem] text-on-surface-variant opacity-60 truncate">{user?.email || ''}</p>
-                </div>
+                {editingName && (
+                  <>
+                    {profileError && (
+                      <p className="mt-3 text-error text-[0.6875rem] font-bold uppercase tracking-widest" role="alert">{profileError}</p>
+                    )}
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => { setEditingName(false); setProfileError(''); }}
+                        disabled={profileSaving}
+                        className="flex-1 py-2 bg-surface-container-highest text-on-surface-variant text-[0.6875rem] font-bold uppercase tracking-widest hover:bg-surface-container-low transition-all disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveProfile}
+                        disabled={profileSaving || !usernameDraft.trim() || usernameDraft.trim() === user?.username}
+                        className="flex-1 py-2 bg-primary-container text-on-primary-container text-[0.6875rem] font-bold uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50"
+                      >
+                        {profileSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Actions */}
               <div className="space-y-3">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-surface-container-low hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-all text-[0.6875rem] font-bold uppercase tracking-widest"
-                >
-                  <span className="material-symbols-outlined text-lg">logout</span>
-                  Sign Out
-                </button>
+                {!logoutConfirm ? (
+                  <button
+                    onClick={() => setLogoutConfirm(true)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-surface-container-low hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-all text-[0.6875rem] font-bold uppercase tracking-widest"
+                  >
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">logout</span>
+                    Sign Out
+                  </button>
+                ) : (
+                  <div className="bg-surface-container-low border border-white/5 p-4 space-y-3">
+                    <p className="text-on-surface text-xs font-bold uppercase tracking-wide leading-relaxed">
+                      Sign out of Momentum?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setLogoutConfirm(false)}
+                        className="flex-1 py-2.5 bg-surface-container-highest text-on-surface-variant text-[0.6875rem] font-bold uppercase tracking-widest hover:bg-surface-container-low transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="flex-1 py-2.5 bg-primary-container text-on-primary-container text-[0.6875rem] font-bold uppercase tracking-widest hover:brightness-110 transition-all"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t border-white/5 pt-3">
                   {!deleteConfirm ? (
@@ -246,7 +351,7 @@ export default function AppShell() {
                       onClick={() => setDeleteConfirm(true)}
                       className="w-full flex items-center gap-3 px-4 py-3 bg-error/5 hover:bg-error/10 text-error transition-all text-[0.6875rem] font-bold uppercase tracking-widest border border-error/20"
                     >
-                      <span className="material-symbols-outlined text-lg">delete_forever</span>
+                      <span className="material-symbols-outlined text-lg" aria-hidden="true">delete_forever</span>
                       Delete Account
                     </button>
                   ) : (

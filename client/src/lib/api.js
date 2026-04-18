@@ -29,6 +29,7 @@ export const authApi = {
   signup: (data) => api.post('/auth/signup', data),
   login: (data) => api.post('/auth/login', data),
   me: () => api.get('/auth/me'),
+  updateProfile: (data) => api.patch('/auth/me', data),
   deleteAccount: () => api.delete('/auth/account'),
 };
 

@@ -224,10 +224,9 @@ test.describe('Habits Management', () => {
     const habits = new HabitsPage(page);
     await habits.goto();
 
-    page.on('dialog', (dialog) => dialog.accept());
-
     // Click the delete button on the featured card (always visible, no hover needed)
     await habits.deleteButton().click();
+    await habits.confirmDeleteButton().click();
 
     expect(deletedId).toBe('1');
   });
@@ -246,8 +245,8 @@ test.describe('Habits Management', () => {
 
     await expect(page.getByText('MORNING RUN')).toBeVisible();
 
-    page.on('dialog', (dialog) => dialog.accept());
     await habits.deleteButton().click();
+    await habits.confirmDeleteButton().click();
 
     await expect(page.getByText('MORNING RUN')).not.toBeVisible();
   });
@@ -256,8 +255,8 @@ test.describe('Habits Management', () => {
     const habits = new HabitsPage(page);
     await habits.goto();
 
-    page.on('dialog', (dialog) => dialog.dismiss());
     await habits.deleteButton().click();
+    await habits.cancelDeleteButton().click();
 
     // Habit should still be visible
     await expect(page.getByText('MORNING RUN')).toBeVisible();
@@ -283,24 +282,4 @@ test.describe('Habits Management', () => {
     await expect(habits.errorMessage).toContainText('Habit name too long');
   });
 
-  test('dormant protocols section is always visible', async ({ page }) => {
-    const habits = new HabitsPage(page);
-    await habits.goto();
-
-    await expect(page.getByText('Dormant Protocols')).toBeVisible();
-    await expect(page.getByText('Cold Exposure')).toBeVisible();
-  });
-
-  test('clicking REACTIVATE on dormant protocol opens create modal', async ({ page }) => {
-    const habits = new HabitsPage(page);
-    await habits.goto();
-
-    // Hover over a dormant card to reveal REACTIVATE button
-    await page.getByText('Cold Exposure').hover();
-    const reactivateBtn = page.getByText('REACTIVATE').first();
-    await reactivateBtn.waitFor({ state: 'visible' });
-    await reactivateBtn.click();
-
-    await expect(habits.modal).toBeVisible();
-  });
 });

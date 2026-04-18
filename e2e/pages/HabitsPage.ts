@@ -51,7 +51,17 @@ export class HabitsPage {
 
   /** Returns the delete button for any visible habit card */
   deleteButton() {
-    return this.page.locator('button[class*="hover:text-error"]').first();
+    return this.page.locator('button[aria-label="Delete habit"]').first();
+  }
+
+  /** Confirm button inside the delete confirmation modal */
+  confirmDeleteButton() {
+    return this.page.getByRole('alertdialog').getByRole('button', { name: /^delete$/i });
+  }
+
+  /** Cancel button inside the delete confirmation modal */
+  cancelDeleteButton() {
+    return this.page.getByRole('alertdialog').getByRole('button', { name: /^cancel$/i });
   }
 
   /** Returns the edit (Pencil) button in the featured first card */

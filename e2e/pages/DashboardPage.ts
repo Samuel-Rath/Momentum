@@ -26,18 +26,15 @@ export class DashboardPage {
   }
 
   habitToggle(name: string) {
-    return this.page
-      .locator(`h4:has-text("${name}")`)
-      .locator('xpath=ancestor::div[contains(@class,"group")]')
-      .getByRole('button', { name: /mark (complete|incomplete)/i });
+    // The entire row is a role="button" with aria-label "Mark complete: <name>" or "Completed: <name>"
+    return this.page.getByRole('button', { name: new RegExp(`(Mark complete|Completed): ${name}`, 'i') });
   }
 
   habitNotesToggle(name: string) {
     return this.page
       .locator(`h4:has-text("${name}")`)
       .locator('xpath=ancestor::div[contains(@class,"group")]')
-      .locator('button')
-      .last();
+      .getByRole('button', { name: /(show|hide) notes/i });
   }
 
   async toggleHabit(name: string) {

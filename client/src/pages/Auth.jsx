@@ -185,19 +185,9 @@ export default function AuthPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex justify-between items-center px-1">
-                    <label htmlFor="password" className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block">
-                      PASSWORD
-                    </label>
-                    {tab === 'login' && (
-                      <button
-                        type="button"
-                        className="font-label text-[0.625rem] uppercase tracking-widest text-primary hover:text-primary-container transition-colors"
-                      >
-                        FORGOT PASSWORD
-                      </button>
-                    )}
-                  </div>
+                  <label htmlFor="password" className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/70 block px-1">
+                    PASSWORD
+                  </label>
                   <div className="relative group">
                     <input
                       id="password"

@@ -4,23 +4,13 @@ import { getTodayString, cn } from '../lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-function useCountdownAEST() {
+function useCountdownLocal() {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     function calc() {
       const now = new Date();
-      const parts = new Intl.DateTimeFormat('en-AU', {
-        timeZone: 'Australia/Sydney',
-        hour: 'numeric', minute: 'numeric', second: 'numeric',
-        hour12: false,
-      }).formatToParts(now);
-
-      const hour = parseInt(parts.find(p => p.type === 'hour').value) % 24;
-      const minute = parseInt(parts.find(p => p.type === 'minute').value);
-      const second = parseInt(parts.find(p => p.type === 'second').value);
-
-      const secsNow = hour * 3600 + minute * 60 + second;
+      const secsNow = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       const secsLeft = (86400 - secsNow) % 86400;
 
       const h = Math.floor(secsLeft / 3600);
@@ -42,22 +32,26 @@ function useCountdownAEST() {
 
 export default function Dashboard() {
   const today = getTodayString();
-  const countdown = useCountdownAEST();
+  const countdown = useCountdownLocal();
 
   const [habits, setHabits] = useState([]);
   const [streaks, setStreaks] = useState([]);
+  const [weekCompletion, setWeekCompletion] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedNotes, setExpandedNotes] = useState({});
   const [noteInputs, setNoteInputs] = useState({});
+  const [noteSaved, setNoteSaved] = useState({});
 
   const fetchToday = useCallback(async () => {
     try {
-      const [logsRes, streaksRes] = await Promise.all([
+      const [logsRes, streaksRes, completionRes] = await Promise.all([
         logsApi.getByDate(today),
         analyticsApi.streaks(),
+        analyticsApi.completion('week'),
       ]);
       setHabits(logsRes.data);
       setStreaks(streaksRes.data);
+      setWeekCompletion(completionRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -84,6 +78,8 @@ export default function Dashboard() {
     try {
       await logsApi.upsert({ habitId: habit.id, date: today, completed: habit.log?.completed ?? false, notes });
       setHabits(prev => prev.map(h => h.id === habit.id ? { ...h, log: { ...(h.log || {}), notes } } : h));
+      setNoteSaved(p => ({ ...p, [habit.id]: true }));
+      setTimeout(() => setNoteSaved(p => ({ ...p, [habit.id]: false })), 2000);
     } catch (err) { console.error(err); }
   }
 
@@ -156,17 +152,23 @@ export default function Dashboard() {
         <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-surface-container-low p-6 sm:p-8">
           <p className="text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-on-surface-variant mb-6">MOMENTUM TREND</p>
           <div className="flex items-end justify-between h-24 gap-1">
-            <div className="w-full bg-surface-container-highest" style={{ height: '40%' }} />
-            <div className="w-full bg-surface-container-highest" style={{ height: '65%' }} />
-            <div className="w-full bg-surface-container-highest" style={{ height: '55%' }} />
-            <div className="w-full bg-primary-container" style={{ height: '90%' }} />
-            <div className="w-full bg-primary-container" style={{ height: '85%' }} />
-            <div className="w-full bg-primary-container shadow-[0_0_10px_rgba(249,115,22,0.3)]" style={{ height: '100%' }} />
-            <div className="w-full border-t-2 border-primary-container" style={{ height: 0 }} />
+            {(weekCompletion.length > 0 ? weekCompletion : Array(7).fill({ rate: 0, total: 0 })).map((d, i) => {
+              const h = d.total === 0 ? 6 : Math.max(6, d.rate);
+              const isEmpty = d.total === 0;
+              const isStrong = !isEmpty && d.rate >= 70;
+              return (
+                <div
+                  key={i}
+                  className={`w-full ${isEmpty ? 'bg-surface-container-highest' : isStrong ? 'bg-primary-container' : 'bg-primary-container/50'}`}
+                  style={{ height: `${h}%` }}
+                  title={d.label ? `${d.label}: ${d.rate}%` : ''}
+                />
+              );
+            })}
           </div>
           <div className="flex justify-between mt-4 text-[0.625rem] font-bold text-on-surface-variant opacity-40 tracking-widest">
-            <span>MON</span>
-            <span>SUN</span>
+            <span>{weekCompletion[0]?.label?.split(',')[0] || '—'}</span>
+            <span>{weekCompletion[weekCompletion.length - 1]?.label?.split(',')[0] || 'TODAY'}</span>
           </div>
         </div>
       </div>
@@ -181,7 +183,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-4 flex-wrap">
               {countdown && (
                 <div className="text-right">
-                  <p className="text-[0.5rem] font-bold uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Day Resets AEST</p>
+                  <p className="text-[0.5rem] font-bold uppercase tracking-widest text-on-surface-variant/40 leading-none mb-1">Day Resets (Local)</p>
                   <p className="text-[0.9375rem] font-black tracking-tighter text-primary-container tabular-nums font-mono">{countdown}</p>
                 </div>
               )}
@@ -210,19 +212,21 @@ export default function Dashboard() {
                 return (
                   <div key={habit.id}>
                     <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleHabit(habit)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHabit(habit); } }}
+                      aria-pressed={done}
+                      aria-label={`${done ? 'Completed' : 'Mark complete'}: ${habit.name}`}
                       className={cn(
-                        'group flex items-center justify-between p-4 sm:p-6 transition-all duration-200 cursor-pointer',
+                        'group flex items-center justify-between p-4 sm:p-6 transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-container',
                         done
                           ? 'bg-surface-container-highest/40 hover:bg-surface-container-highest'
                           : 'bg-surface-container-low hover:bg-surface-container-highest'
                       )}
                     >
                       <div className="flex items-center gap-4 sm:gap-6 min-w-0">
-                        <button
-                          onClick={() => toggleHabit(habit)}
-                          className="shrink-0 transition-transform active:scale-90 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                          aria-label={done ? 'Mark incomplete' : 'Mark complete'}
-                        >
+                        <div className="shrink-0 transition-transform group-active:scale-90 min-h-[44px] min-w-[44px] flex items-center justify-center">
                           {done ? (
                             <div className="w-6 h-6 border-2 border-primary-container bg-primary-container flex items-center justify-center">
                               <span className="material-symbols-outlined text-on-primary font-bold" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1, 'wght' 700" }}>check</span>
@@ -230,7 +234,7 @@ export default function Dashboard() {
                           ) : (
                             <div className="w-6 h-6 border-2 border-on-surface-variant/30 group-hover:border-primary-container transition-colors" />
                           )}
-                        </button>
+                        </div>
                         <div className="min-w-0">
                           <h4 className={cn('text-base sm:text-lg font-bold leading-none mb-1 truncate', done && 'opacity-40')}>{habit.name}</h4>
                           <p className="text-[0.6875rem] font-medium text-on-surface-variant opacity-50 uppercase tracking-widest truncate">
@@ -243,30 +247,41 @@ export default function Dashboard() {
                         <span
                           className={cn('material-symbols-outlined hidden sm:block', done ? 'text-tertiary' : 'text-on-surface-variant/30 group-hover:text-primary-container')}
                           style={{ fontVariationSettings: done ? "'FILL' 1" : "'FILL' 0" }}
+                          aria-hidden="true"
                         >
                           {getCategoryIcon(habit.category)}
                         </span>
                         <button
-                          onClick={() => setExpandedNotes(p => ({ ...p, [habit.id]: !p[habit.id] }))}
+                          onClick={(e) => { e.stopPropagation(); setExpandedNotes(p => ({ ...p, [habit.id]: !p[habit.id] })); }}
                           className="text-on-surface-variant hover:text-on-surface transition-colors p-1 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          aria-label={notesOpen ? 'Hide notes' : 'Show notes'}
+                          aria-expanded={notesOpen}
                         >
                           {notesOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
                       </div>
                     </div>
                     {notesOpen && (
-                      <div className="bg-surface-container-lowest p-3 sm:p-4 flex gap-2 border-t border-surface-container-highest">
-                        <input
-                          className="input text-xs py-2"
-                          placeholder="Log execution notes…"
-                          aria-label={`Execution notes for ${habit.name}`}
-                          value={noteInputs[habit.id] ?? habit.log?.notes ?? ''}
-                          onChange={e => setNoteInputs(p => ({ ...p, [habit.id]: e.target.value }))}
-                          onKeyDown={e => e.key === 'Enter' && saveNote(habit)}
-                        />
-                        <button onClick={() => saveNote(habit)} className="btn-primary px-3 sm:px-4 py-2 text-xs whitespace-nowrap">
-                          Log
-                        </button>
+                      <div className="bg-surface-container-lowest p-3 sm:p-4 border-t border-surface-container-highest">
+                        <div className="flex gap-2">
+                          <input
+                            className="input text-xs py-2"
+                            placeholder="Log execution notes…"
+                            aria-label={`Execution notes for ${habit.name}`}
+                            value={noteInputs[habit.id] ?? habit.log?.notes ?? ''}
+                            onChange={e => setNoteInputs(p => ({ ...p, [habit.id]: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && saveNote(habit)}
+                          />
+                          <button onClick={() => saveNote(habit)} className="btn-primary px-3 sm:px-4 py-2 text-xs whitespace-nowrap">
+                            Log
+                          </button>
+                        </div>
+                        {noteSaved[habit.id] && (
+                          <p className="mt-2 text-[0.625rem] font-bold uppercase tracking-widest text-tertiary flex items-center gap-1" role="status">
+                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }} aria-hidden="true">check_circle</span>
+                            Saved
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
