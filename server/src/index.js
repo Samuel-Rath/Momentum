@@ -24,7 +24,15 @@ if (!process.env.SESSION_SECRET) {
 
 const app = express();
 
-// Security headers
+// When deployed behind a reverse proxy (Render, Fly, Heroku, etc.), trust the
+// first proxy hop so req.ip and the `secure` cookie flag work correctly, and
+// express-rate-limit keys requests by the real client IP rather than the proxy's.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+// Security headers — default helmet config is appropriate for a JSON API
+// (no inline HTML served, so CSP defaults are strict enough).
 app.use(helmet());
 
 // CORS — restrict to configured origin only
@@ -69,11 +77,17 @@ app.use('/api/analytics', apiLimiter, analyticsRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-// Global error handler — catches unhandled errors from async routes
+// Global error handler — catches unhandled errors from async routes.
+// Only honour err.status when it is an explicit client-error code (4xx).
+// Any other value (including server-origin 5xx or missing) collapses to a
+// generic 500 so internal details can't leak via the status line.
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
   console.error(err);
-  res.status(err.status || 500).json({ error: 'Internal server error' });
+  const status = Number.isInteger(err?.status) && err.status >= 400 && err.status < 500
+    ? err.status
+    : 500;
+  res.status(status).json({ error: 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 5000;

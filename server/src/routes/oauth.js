@@ -76,7 +76,13 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
     },
     async (_at, _rt, profile, done) => {
       try {
-        const email = profile.emails?.[0]?.value;
+        // Only accept verified + primary emails. An unverified email would allow
+        // an attacker to claim any address (and hijack an existing Momentum account).
+        const emails = Array.isArray(profile.emails) ? profile.emails : [];
+        const best = emails.find(e => e.primary && e.verified !== false)
+                  || emails.find(e => e.verified !== false);
+        const email = best?.value;
+        if (!email) return done(null, false, { message: 'no_verified_email' });
         done(null, await findOrCreateOAuthUser({
           email,
           displayName: profile.displayName || profile.username,
@@ -106,15 +112,18 @@ function notConfigured(provider) {
 }
 
 // ── Google ──
+// `state: true` has passport generate & verify a CSRF state param via the session.
+// Without it, an attacker could CSRF a victim into logging in as the attacker's account.
 router.get('/google',
   notConfigured('google'),
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', { scope: ['profile', 'email'], state: true })
 );
 router.get('/google/callback',
   notConfigured('google'),
   passport.authenticate('google', {
     session: false,
     failureRedirect: `${CLIENT_URL}/auth?error=google_failed`,
+    state: true,
   }),
   (req, res) => res.redirect(
     `${CLIENT_URL}/auth/callback#token=${encodeURIComponent(signToken(req.user.id))}`
@@ -125,13 +134,14 @@ router.get('/google/callback',
 
 router.get('/github',
   notConfigured('github'),
-  passport.authenticate('github', { scope: ['user:email'] })
+  passport.authenticate('github', { scope: ['user:email'], state: true })
 );
 router.get('/github/callback',
   notConfigured('github'),
   passport.authenticate('github', {
     session: false,
     failureRedirect: `${CLIENT_URL}/auth?error=github_failed`,
+    state: true,
   }),
   (req, res) => res.redirect(
     `${CLIENT_URL}/auth/callback#token=${encodeURIComponent(signToken(req.user.id))}`

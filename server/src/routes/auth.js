@@ -16,7 +16,21 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limit for authenticated account-mutation endpoints (per IP)
+const accountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Precomputed bcrypt hash of a random string — used as a constant-time decoy
+// when login is attempted against a non-existent email, so request timing
+// can't be used to enumerate registered emails.
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync(require('crypto').randomBytes(32).toString('hex'), 12);
 
 function signToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -30,18 +44,23 @@ router.post('/signup', authLimiter, async (req, res, next) => {
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields required' });
     }
-    if (typeof username !== 'string' || username.length < 2 || username.length > 32) {
+    if (typeof username !== 'string') {
+      return res.status(400).json({ error: 'Invalid input' });
+    }
+    const trimmedUsername = username.trim();
+    if (trimmedUsername.length < 2 || trimmedUsername.length > 32) {
       return res.status(400).json({ error: 'Username must be 2–32 characters' });
     }
-    if (!EMAIL_RE.test(email) || email.length > 254) {
+    if (typeof email !== 'string' || !EMAIL_RE.test(email) || email.length > 254) {
       return res.status(400).json({ error: 'Invalid email address' });
     }
     if (typeof password !== 'string' || password.length < 8 || password.length > 128) {
       return res.status(400).json({ error: 'Password must be 8–128 characters' });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
     const existing = await prisma.user.findFirst({
-      where: { OR: [{ email: email.toLowerCase() }, { username }] },
+      where: { OR: [{ email: normalizedEmail }, { username: trimmedUsername }] },
     });
     if (existing) {
       return res.status(409).json({ error: 'Email or username already in use' });
@@ -49,7 +68,7 @@ router.post('/signup', authLimiter, async (req, res, next) => {
 
     const hashed = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { username, email: email.toLowerCase(), password: hashed },
+      data: { username: trimmedUsername, email: normalizedEmail, password: hashed },
       select: { id: true, username: true, email: true, createdAt: true },
     });
     res.status(201).json({ token: signToken(user.id), user });
@@ -71,7 +90,11 @@ router.post('/login', authLimiter, async (req, res, next) => {
     }
 
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    // Always run bcrypt.compare — against a real hash when the user exists,
+    // or a precomputed decoy otherwise — so response time does not reveal
+    // whether the email is registered (timing-based enumeration defense).
+    const passwordOk = await bcrypt.compare(password, user?.password ?? DUMMY_BCRYPT_HASH);
+    if (!user || !passwordOk) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -97,7 +120,7 @@ router.get('/me', authMiddleware, async (req, res, next) => {
 });
 
 // PATCH /api/auth/me
-router.patch('/me', authMiddleware, async (req, res, next) => {
+router.patch('/me', accountLimiter, authMiddleware, async (req, res, next) => {
   try {
     const { username } = req.body;
     if (typeof username !== 'string' || username.trim().length < 2 || username.trim().length > 32) {
@@ -121,7 +144,7 @@ router.patch('/me', authMiddleware, async (req, res, next) => {
 });
 
 // DELETE /api/auth/account
-router.delete('/account', authMiddleware, async (req, res, next) => {
+router.delete('/account', accountLimiter, authMiddleware, async (req, res, next) => {
   try {
     await prisma.user.delete({ where: { id: req.userId } });
     res.json({ success: true });

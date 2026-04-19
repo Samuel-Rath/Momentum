@@ -59,8 +59,9 @@ router.post('/', async (req, res, next) => {
 // PUT /api/habits/:id
 router.put('/:id', async (req, res, next) => {
   try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid habit id' });
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) return res.status(400).json({ error: 'Invalid habit id' });
+    if (!Number.isSafeInteger(id)) return res.status(400).json({ error: 'Invalid habit id' });
 
     const habit = await prisma.habit.findFirst({ where: { id, userId: req.userId } });
     if (!habit) return res.status(404).json({ error: 'Habit not found' });
@@ -96,8 +97,9 @@ router.put('/:id', async (req, res, next) => {
 // DELETE /api/habits/:id  (soft delete)
 router.delete('/:id', async (req, res, next) => {
   try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid habit id' });
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) return res.status(400).json({ error: 'Invalid habit id' });
+    if (!Number.isSafeInteger(id)) return res.status(400).json({ error: 'Invalid habit id' });
 
     const habit = await prisma.habit.findFirst({ where: { id, userId: req.userId } });
     if (!habit) return res.status(404).json({ error: 'Habit not found' });

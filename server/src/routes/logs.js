@@ -51,14 +51,19 @@ router.post('/', async (req, res, next) => {
     if (!habitId || !date) {
       return res.status(400).json({ error: 'habitId and date required' });
     }
-    if (typeof habitId !== 'number' && typeof habitId !== 'string') {
+    // Accept only numeric ints (or numeric strings); reject floats, "1abc", etc.
+    let id;
+    if (typeof habitId === 'number' && Number.isSafeInteger(habitId) && habitId > 0) {
+      id = habitId;
+    } else if (typeof habitId === 'string' && /^\d+$/.test(habitId)) {
+      id = parseInt(habitId, 10);
+      if (!Number.isSafeInteger(id)) return res.status(400).json({ error: 'Invalid habitId' });
+    } else {
       return res.status(400).json({ error: 'Invalid habitId' });
     }
+
     const parsedDate = parseDate(String(date));
     if (!parsedDate) return res.status(400).json({ error: 'Invalid date format — use YYYY-MM-DD' });
-
-    const id = parseInt(habitId, 10);
-    if (isNaN(id)) return res.status(400).json({ error: 'Invalid habitId' });
 
     // Trim notes to prevent huge payloads slipping past body size limit
     const sanitisedNotes = typeof notes === 'string' ? notes.slice(0, 1000) : null;
