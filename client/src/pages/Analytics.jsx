@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
 import { analyticsApi } from '../lib/api';
+import {
+  Activity, Flame, TrendingUp, Award, Sparkles, AlertTriangle,
+} from 'lucide-react';
+import {
+  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
+} from 'recharts';
 
 export default function Analytics() {
   const [streaks, setStreaks] = useState([]);
@@ -27,9 +33,9 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <span className="material-symbols-outlined text-primary animate-pulse" style={{ fontSize: '36px', fontVariationSettings: "'FILL' 1" }}>insights</span>
-        <p className="text-on-surface-variant text-xs uppercase tracking-widest">Processing data…</p>
+      <div className="flex flex-col items-center justify-center h-[70vh] gap-3">
+        <Activity className="text-accent animate-pulse-soft" size={22} />
+        <p className="eyebrow">Loading analytics…</p>
       </div>
     );
   }
@@ -41,241 +47,389 @@ export default function Analytics() {
 
   const maxCurrentStreak = Math.max(0, ...streaks.map(s => s.currentStreak));
   const maxLongestStreak = Math.max(0, ...streaks.map(s => s.longestStreak));
+  const activeStreaks = streaks.filter(s => s.currentStreak > 0).length;
+  const dormantCount = streaks.filter(s => s.currentStreak === 0).length;
 
   const sortedByStreak = [...streaks].sort((a, b) => b.currentStreak - a.currentStreak);
-  const topPerformers = sortedByStreak.filter(s => s.currentStreak > 0).slice(0, 3);
+  const topPerformers = sortedByStreak.filter(s => s.currentStreak > 0).slice(0, 5);
 
-  // Pad heatmap to 91 cells for 13-col grid
   const heatCells = [...heatmap].slice(-91);
   while (heatCells.length < 91) heatCells.unshift({ rate: null });
 
-  const completionBars = completion.slice(-7);
+  const chartData = completion.slice(-14).map(d => ({
+    date: d.label?.split(',')[0]?.slice(0, 3) || '',
+    rate: d.total === 0 ? 0 : d.rate,
+    total: d.total,
+  }));
 
   return (
-    <div className="pt-6 sm:pt-8 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12">
+    <div className="px-6 sm:px-10 py-10 max-w-[1280px] mx-auto">
 
-      {/* Header */}
-      <section className="mb-8 sm:mb-12">
-        <h2 className="text-on-surface-variant font-label text-[0.6875rem] uppercase tracking-[0.2em] mb-2 opacity-60">Performance Deep-Dive</h2>
-        <h1 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tighter uppercase">
-          Analytics &amp; <span className="text-primary">Insights</span>
-        </h1>
+      {/* ── Editorial header ── */}
+      <header className="mb-14 sm:mb-20">
+        <p className="eyebrow mb-4">/ 03 Analytics — performance report</p>
+        <h2 className="display text-[56px] sm:text-[88px] lg:text-[120px] text-ink max-w-4xl">
+          Patterns &<br />
+          <span className="italic text-brass">progress.</span>
+        </h2>
+        <p className="text-base text-slate max-w-lg mt-5">
+          A quiet read of your consistency. Streaks, trends, and the days you kept your word.
+        </p>
+      </header>
+
+      {/* ── Summary row ── */}
+      <section className="mb-14 sm:mb-20">
+        <SectionHeader num="01" title="The" italic="numbers" trailing="at a glance." />
+
+        <div className="grid grid-cols-12 gap-[1px] bg-rule border border-rule">
+          <KpiCell
+            span="col-span-6 lg:col-span-3"
+            num="01"
+            label="Avg completion"
+            value={overallRate}
+            unit="%"
+            hint={`${validDays.length} active days`}
+          />
+          <KpiCell
+            span="col-span-6 lg:col-span-3"
+            num="02"
+            label="Longest streak"
+            value={maxLongestStreak}
+            unit="days"
+            italic
+            hint={maxCurrentStreak >= maxLongestStreak && maxLongestStreak > 0 ? 'Personal best' : `Current ${maxCurrentStreak}d`}
+          />
+          <KpiCell
+            span="col-span-6 lg:col-span-3"
+            num="03"
+            label="Active"
+            value={activeStreaks}
+            unit=""
+            hint={streaks.length ? `of ${streaks.length} tasks` : 'No tasks yet'}
+          />
+          <KpiCell
+            span="col-span-6 lg:col-span-3"
+            num="04"
+            label="Dormant"
+            value={dormantCount}
+            unit=""
+            hint={dormantCount === 0 ? 'All on track' : 'Need attention'}
+          />
+        </div>
       </section>
 
-      {/* Main bento grid */}
-      <div className="grid grid-cols-12 gap-4 sm:gap-6">
+      {/* ── Chart + Top streaks ── */}
+      <section className="mb-14 sm:mb-20">
+        <SectionHeader
+          num="02"
+          title="Daily"
+          italic="completion,"
+          trailing="last fortnight."
+        />
 
-        {/* Heatmap — col 8 */}
-        <div className="col-span-12 lg:col-span-8 bg-surface-container-low p-6 sm:p-8 border-l-2 border-primary/20">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-3">
-            <div>
-              <h3 className="font-bold text-base sm:text-lg tracking-tight uppercase">90-Day Consistency Heatmap</h3>
-              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60">Execution Density Matrix</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[0.625rem] font-bold uppercase tracking-widest opacity-40">Low</span>
-              <div className="flex gap-1">
-                <div className="w-3 h-3 bg-surface-container-highest" />
-                <div className="w-3 h-3 bg-primary/20" />
-                <div className="w-3 h-3 bg-primary/50" />
-                <div className="w-3 h-3 bg-primary" />
+        <div className="grid grid-cols-12 gap-[1px] bg-rule border border-rule">
+          {/* Bar chart */}
+          <div className="col-span-12 lg:col-span-8 bg-paper p-6 sm:p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <p className="eyebrow">/ 02A Completion rate</p>
+                <p className="font-serif text-lg mt-1">{chartData.length} days</p>
               </div>
-              <span className="text-[0.625rem] font-bold uppercase tracking-widest opacity-40">High</span>
+              <span className="badge-accent">
+                <TrendingUp size={10} />
+                {overallRate}% avg
+              </span>
+            </div>
+
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#D6CFBE" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={{ stroke: '#D6CFBE' }}
+                    tick={{ fill: '#5E6A77', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                    dy={8}
+                    interval={Math.max(0, Math.floor(chartData.length / 7) - 1)}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: '#8A939E', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                    tickFormatter={v => `${v}`}
+                    width={28}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(30, 58, 95, 0.06)' }}
+                    contentStyle={{
+                      background: '#F3F1EB',
+                      border: '1px solid #D6CFBE',
+                      borderRadius: '2px',
+                      fontSize: '11px',
+                      fontFamily: 'JetBrains Mono',
+                      color: '#0F1823',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                    }}
+                    labelStyle={{ color: '#5E6A77', marginBottom: 2 }}
+                    formatter={(v) => [`${v}%`, 'Rate']}
+                  />
+                  <Bar dataKey="rate" radius={[2, 2, 0, 0]}>
+                    {chartData.map((d, i) => (
+                      <Cell
+                        key={i}
+                        fill={d.total === 0 ? '#E3DED0' : d.rate >= 70 ? '#1E3A5F' : '#8A6F3D'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="mt-5 pt-5 border-t border-rule-soft flex items-center gap-6 flex-wrap">
+              <LegendDot color="#1E3A5F" label="Strong day (≥70%)" />
+              <LegendDot color="#8A6F3D" label="Below target" />
+              <LegendDot color="#E3DED0" label="No data" />
             </div>
           </div>
+
+          {/* Top streaks */}
+          <div className="col-span-12 lg:col-span-4 bg-paper p-6 sm:p-8">
+            <p className="eyebrow mb-1">/ 02B Top streaks</p>
+            <p className="font-serif text-lg mb-6">In motion.</p>
+
+            {topPerformers.length > 0 ? (
+              <ol className="divide-y divide-rule-soft">
+                {topPerformers.map((s, i) => {
+                  const pct = maxLongestStreak > 0
+                    ? Math.round((s.currentStreak / maxLongestStreak) * 100)
+                    : 100;
+                  return (
+                    <li key={s.id} className="py-3.5 first:pt-0 last:pb-0">
+                      <div className="flex items-baseline justify-between gap-2 mb-2">
+                        <div className="flex items-baseline gap-2 min-w-0">
+                          <span className="font-mono text-[10px] text-slate-soft tabular-nums w-5 shrink-0">
+                            {String(i + 1).padStart(2, '0')}
+                          </span>
+                          <span className="font-serif text-base truncate leading-tight">{s.name}</span>
+                        </div>
+                        <span className="font-mono text-[11px] uppercase tracking-tracked-tight text-brass tabular-nums shrink-0">
+                          {s.currentStreak}d
+                        </span>
+                      </div>
+                      <div className="h-[2px] w-full bg-paper-3 ml-7">
+                        <div
+                          className="h-full bg-brass transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <div className="text-center py-10 border-t border-rule-soft">
+                <Flame size={20} className="text-slate-soft mx-auto mb-3" />
+                <p className="font-serif text-xl mb-1">No active streaks.</p>
+                <p className="text-xs text-slate">Log a task to begin.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Heatmap ── */}
+      <section className="mb-14 sm:mb-20">
+        <SectionHeader
+          num="03"
+          title="Ninety"
+          italic="days,"
+          trailing="in one view."
+          hint="Darker squares mean higher completion."
+        />
+
+        <div className="bg-paper border border-rule p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div>
+              <p className="eyebrow">/ 03A Consistency</p>
+              <p className="font-serif text-lg mt-1">Daily completion rate</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="eyebrow text-[10px]">Low</span>
+              <div className="flex gap-1">
+                <div className="w-3.5 h-3.5 bg-paper-3 border border-rule-soft" />
+                <div className="w-3.5 h-3.5" style={{ background: 'rgba(30, 58, 95, 0.25)' }} />
+                <div className="w-3.5 h-3.5" style={{ background: 'rgba(30, 58, 95, 0.55)' }} />
+                <div className="w-3.5 h-3.5 bg-accent" />
+              </div>
+              <span className="eyebrow text-[10px]">High</span>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
-            <div className="grid gap-1.5 min-w-[260px]" style={{ gridTemplateColumns: 'repeat(13, 1fr)' }}>
+            <div
+              className="grid gap-1.5 min-w-[600px]"
+              style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}
+            >
               {heatCells.map((cell, i) => {
-                let opacity = 1;
-                let isBg = false;
-                if (cell.rate === null || cell.rate === undefined) { isBg = true; }
-                else if (cell.rate >= 0.8) { opacity = 1; }
-                else if (cell.rate >= 0.5) { opacity = 0.5; }
-                else if (cell.rate >= 0.2) { opacity = 0.2; }
-                else { isBg = true; }
+                let bg;
+                let border = 'transparent';
+                if (cell.rate === null || cell.rate === undefined) {
+                  bg = '#ECE8DC';
+                  border = '#E3DED0';
+                } else if (cell.rate >= 0.8) {
+                  bg = '#1E3A5F';
+                } else if (cell.rate >= 0.5) {
+                  bg = 'rgba(30, 58, 95, 0.55)';
+                } else if (cell.rate >= 0.2) {
+                  bg = 'rgba(30, 58, 95, 0.25)';
+                } else {
+                  bg = '#E3DED0';
+                }
                 return (
                   <div
                     key={i}
-                    className={`aspect-square ${isBg ? 'bg-surface-container-highest' : 'bg-primary'}`}
-                    style={!isBg ? { opacity } : {}}
+                    className="aspect-square rounded-sm"
+                    style={{ background: bg, border: `1px solid ${border}` }}
+                    title={cell.date ? `${cell.date}: ${Math.round((cell.rate || 0) * 100)}%` : ''}
                   />
                 );
               })}
             </div>
           </div>
-          <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-outline-variant/5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div className="flex gap-8 sm:gap-12">
-              <div>
-                <p className="font-label text-[0.625rem] uppercase tracking-widest text-on-surface-variant/50 mb-1">Mean Frequency</p>
-                <p className="text-xl font-black tracking-tighter">{overallRate}%</p>
-              </div>
-              <div>
-                <p className="font-label text-[0.625rem] uppercase tracking-widest text-on-surface-variant/50 mb-1">Best Streak</p>
-                <p className="text-xl font-black tracking-tighter">{maxCurrentStreak} days</p>
-              </div>
-            </div>
-            <span className="inline-flex items-center gap-2 text-tertiary font-bold text-[0.6875rem] uppercase tracking-widest">
-              <span className="material-symbols-outlined text-sm">trending_up</span>
-              {maxLongestStreak > 0 ? `PEAK: ${maxLongestStreak} DAYS` : 'BUILDING'}
-            </span>
-          </div>
         </div>
+      </section>
 
-        {/* Stats column — col 4 */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-4 sm:gap-6">
-          <div className="bg-surface-container-low p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <span className="material-symbols-outlined" style={{ fontSize: '8rem' }}>bolt</span>
-            </div>
-            <div>
-              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60 mb-2">Current Velocity</p>
-              <h4 className="text-5xl sm:text-6xl font-black tracking-tighter text-on-surface">
-                {maxCurrentStreak} <span className="text-xl text-on-surface-variant">DAYS</span>
-              </h4>
-            </div>
-            <div className="mt-6 sm:mt-8">
-              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-primary font-bold">
-                {maxCurrentStreak >= maxLongestStreak && maxLongestStreak > 0 ? 'New Personal Record' : 'Active Streak'}
-              </p>
-              <div className="w-full h-1 bg-surface-container-highest mt-2">
-                <div
-                  className="h-full bg-primary shadow-[0_0_15px_rgba(249,115,22,0.3)]"
-                  style={{ width: maxLongestStreak > 0 ? `${Math.round((maxCurrentStreak / maxLongestStreak) * 100)}%` : '0%' }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="bg-surface-container-low p-5 sm:p-6">
-            <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60 mb-4">Daily Completion Rate</p>
-            <div className="flex items-end gap-1 h-20 sm:h-24 mb-4">
-              {completionBars.length > 0 ? completionBars.map((d, i) => (
-                <div
-                  key={i}
-                  className={`flex-1 ${d.rate >= 70 ? 'bg-primary' : 'bg-primary/40'}`}
-                  style={{ height: `${Math.max(4, d.rate)}%` }}
-                />
-              )) : (
-                <>
-                  <div className="flex-1 bg-surface-container-highest" style={{ height: '40%' }} />
-                  <div className="flex-1 bg-surface-container-highest" style={{ height: '60%' }} />
-                  <div className="flex-1 bg-primary/60" style={{ height: '85%' }} />
-                  <div className="flex-1 bg-primary" style={{ height: '95%' }} />
-                  <div className="flex-1 bg-primary/40" style={{ height: '70%' }} />
-                  <div className="flex-1 bg-surface-container-highest" style={{ height: '50%' }} />
-                  <div className="flex-1 bg-primary" style={{ height: '100%' }} />
-                </>
-              )}
-            </div>
-            <div className="flex justify-between items-center">
-              <p className="text-2xl font-black tracking-tighter">{overallRate}%</p>
-              <p className="font-label text-[0.625rem] uppercase tracking-widest opacity-40">{validDays.length} DAYS</p>
-            </div>
-          </div>
-        </div>
+      {/* ── Insights + Report ── */}
+      <section>
+        <SectionHeader num="04" title="Reading" italic="between" trailing="the lines." />
 
-        {/* Precision Insights — col 5 */}
-        <div className="col-span-12 lg:col-span-5 bg-[#1b1b20] p-6 sm:p-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent pointer-events-none" />
-          <div className="relative z-10">
+        <div className="grid grid-cols-12 gap-[1px] bg-rule border border-rule">
+          {/* Insights */}
+          <div className="col-span-12 lg:col-span-7 bg-paper p-6 sm:p-8">
             <div className="flex items-center gap-3 mb-6">
-              <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-              <h3 className="font-bold text-base sm:text-lg uppercase tracking-tight">Precision Insights</h3>
+              <Sparkles size={16} className="text-brass" />
+              <p className="eyebrow">/ 04A Insights</p>
             </div>
+
             {insights.length > 0 ? (
-              <div className="space-y-6">
-                {insights.slice(0, 3).map((insight, i) => (
-                  <div key={i}>
-                    <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">
-                      {insight.type === 'positive' ? 'Optimisation Detected' : insight.type === 'warning' ? 'Momentum Inhibitor' : 'System Insight'}
-                    </p>
-                    <p className="text-base sm:text-lg font-medium leading-tight">{insight.text}</p>
-                  </div>
+              <ol className="divide-y divide-rule-soft">
+                {insights.slice(0, 4).map((insight, i) => (
+                  <li key={i} className="grid grid-cols-[36px_1fr] gap-4 py-5 first:pt-0">
+                    <span className="font-mono text-[10px] uppercase tracking-tracked-tight text-brass pt-1.5">
+                      {String.fromCharCode(65 + i)}.
+                    </span>
+                    <div>
+                      <p className="eyebrow mb-1.5">
+                        {insight.type === 'positive' ? '/ Positive signal' : insight.type === 'warning' ? '/ Watch out' : '/ Observation'}
+                      </p>
+                      <p className="font-serif text-xl leading-snug">{insight.text}</p>
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ol>
             ) : (
               <div className="space-y-6">
                 <div>
-                  <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">Peak Performance Window</p>
-                  <p className="text-base sm:text-lg font-medium leading-tight">Execute protocols consistently for 7+ days to generate precision insights.</p>
-                </div>
-                <div>
-                  <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">System Status</p>
-                  <p className="text-base sm:text-lg font-medium leading-tight">
+                  <p className="eyebrow mb-1.5">/ A Observation</p>
+                  <p className="font-serif text-xl leading-snug">
                     {maxCurrentStreak > 0
-                      ? <><span className="text-secondary font-bold">{maxCurrentStreak}-day streak</span> detected. Maintain velocity.</>
-                      : 'Initialise protocols to begin performance tracking.'}
+                      ? <>Your longest current streak is <em className="italic text-brass">{maxCurrentStreak} days</em>. Keep it going.</>
+                      : <>Complete tasks for <em className="italic text-brass">seven consecutive days</em> to unlock personalised insights.</>}
                   </p>
                 </div>
-                <div>
-                  <p className="font-label text-[0.625rem] uppercase tracking-widest text-secondary/60 mb-1">Consistency Alert</p>
-                  <p className="text-base sm:text-lg font-medium leading-tight">
+                <div className="pt-5 border-t border-rule-soft">
+                  <p className="eyebrow mb-1.5">/ B {overallRate >= 70 ? 'Strong signal' : 'Room to grow'}</p>
+                  <p className="font-serif text-xl leading-snug">
                     {overallRate >= 70
-                      ? <><span className="text-secondary font-bold">{overallRate}% completion rate</span> — high-performance zone.</>
-                      : 'Track daily completions to identify peak performance windows.'}
+                      ? <>You're completing tasks at <em className="italic text-brass">{overallRate}%</em> on tracked days — a strong rhythm.</>
+                      : overallRate >= 40
+                      ? <>Average completion is <em className="italic text-brass">{overallRate}%</em>. Try narrowing focus to one task.</>
+                      : <>Start with <em className="italic text-brass">one small task</em> each day to build momentum.</>}
                   </p>
                 </div>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Executive Summary — col 7 */}
-        <div className="col-span-12 lg:col-span-7 bg-surface-container-low p-6 sm:p-8">
-          <div className="flex justify-between items-start mb-6 sm:mb-8">
-            <div>
-              <h3 className="font-bold text-base sm:text-lg tracking-tight uppercase">Executive Summary</h3>
-              <p className="font-label text-[0.6875rem] uppercase tracking-widest text-on-surface-variant/60">Performance Report Analysis</p>
+          {/* Dormant list */}
+          <div className="col-span-12 lg:col-span-5 bg-paper p-6 sm:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <p className="eyebrow">/ 04B Dormant tasks</p>
+              <span className="badge">{dormantCount}</span>
             </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-            <div>
-              <h4 className="font-label text-[0.625rem] uppercase tracking-[0.15em] text-on-surface-variant/40 mb-4 border-b border-outline-variant/10 pb-2">
-                Top Active Streaks
-              </h4>
-              <ul className="space-y-4">
-                {topPerformers.length > 0 ? topPerformers.map(s => (
-                  <li key={s.id} className="flex justify-between items-center gap-3">
-                    <span className="text-sm font-medium truncate">{s.name}</span>
-                    <span className="text-tertiary font-bold tracking-tighter shrink-0">{s.currentStreak}d</span>
-                  </li>
-                )) : (
-                  <li className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 bg-surface-container-highest" />
-                    <span className="text-sm font-medium opacity-60">No active streaks yet</span>
-                  </li>
-                )}
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-label text-[0.625rem] uppercase tracking-[0.15em] text-on-surface-variant/40 mb-4 border-b border-outline-variant/10 pb-2">
-                Dormant Habits
-              </h4>
-              <ul className="space-y-4">
-                {streaks.filter(s => s.currentStreak === 0).slice(0, 3).map((s, i) => (
-                  <li key={s.id} className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 ${i === 0 ? 'bg-error' : i === 1 ? 'bg-primary' : 'bg-surface-container-highest'}`} />
-                    <span className="text-sm font-medium truncate">{s.name}</span>
-                  </li>
-                ))}
-                {streaks.filter(s => s.currentStreak === 0).length === 0 && (
-                  <li className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 bg-tertiary" />
-                    <span className="text-sm font-medium opacity-60">All habits have active streaks</span>
-                  </li>
-                )}
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 p-4 bg-surface-container-highest/30 border border-outline-variant/10 italic text-on-surface-variant/80 text-sm leading-relaxed">
-            {overallRate >= 80
-              ? '"System integrity remains high. Velocity has stabilised in the upper decile. Recommendation: Increase resistance in Cognitive Focus segment to maintain growth trajectory."'
-              : overallRate >= 50
-              ? '"Momentum is building. Focus on consistency over intensity. Each completed protocol compounds your performance architecture."'
-              : '"Begin with one high-leverage habit. Establish the neurological baseline before adding complexity to the system."'}
+
+            {streaks.filter(s => s.currentStreak === 0).length === 0 ? (
+              <div className="text-center py-10 border-t border-rule-soft">
+                <Award size={20} className="text-success mx-auto mb-3" />
+                <p className="font-serif text-xl mb-1">All in motion.</p>
+                <p className="text-xs text-slate">Every task has an active streak.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate mb-5">
+                  Tasks without an active streak. A gentle nudge toward what's slipped.
+                </p>
+                <ol className="divide-y divide-rule-soft">
+                  {streaks.filter(s => s.currentStreak === 0).slice(0, 6).map((s, i) => (
+                    <li key={s.id} className="grid grid-cols-[28px_1fr_auto] items-baseline gap-3 py-3">
+                      <span className="font-mono text-[10px] text-slate-soft tabular-nums">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="font-serif text-base leading-tight truncate">{s.name}</span>
+                      <span className="eyebrow text-[10px] capitalize">{s.category}</span>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
           </div>
         </div>
+      </section>
+    </div>
+  );
+}
+
+function SectionHeader({ num, title, italic, trailing, hint, action }) {
+  return (
+    <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
+      <div>
+        <p className="eyebrow mb-2">/ {num} Section</p>
+        <h3 className="font-serif text-3xl sm:text-4xl leading-tight tracking-tight">
+          {title} {italic && <em className="italic text-brass">{italic}</em>} {trailing && <span>{trailing}</span>}
+        </h3>
+        {hint && <p className="text-sm text-slate mt-2">{hint}</p>}
       </div>
+      {action && <div>{action}</div>}
+    </div>
+  );
+}
 
+function KpiCell({ num, label, value, unit, hint, italic, span }) {
+  return (
+    <div className={`${span} bg-paper p-5 sm:p-6 flex flex-col`}>
+      <div className="flex items-center justify-between mb-5">
+        <span className="eyebrow">/ {num}</span>
+        <span className="font-mono text-[10px] text-slate-soft uppercase tracking-tracked-tight">{label}</span>
+      </div>
+      <div className="flex items-baseline gap-1.5">
+        <span className={`font-serif text-[52px] leading-none tracking-tight tabular-nums ${italic ? 'italic text-brass' : ''}`}>
+          {value}
+        </span>
+        {unit && <span className="font-mono text-xs uppercase tracking-tracked-tight text-slate">{unit}</span>}
+      </div>
+      {hint && <p className="text-xs text-slate mt-3 truncate">{hint}</p>}
+    </div>
+  );
+}
+
+function LegendDot({ color, label }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-3 h-3 rounded-sm" style={{ background: color }} />
+      <span className="eyebrow text-[10px] normal-case">{label}</span>
     </div>
   );
 }

@@ -14,8 +14,11 @@ function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-base flex items-center justify-center">
-        <div className="text-accent text-2xl animate-pulse">🔥</div>
+      <div className="min-h-screen bg-paper flex items-center justify-center">
+        <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-slate">
+          <div className="w-3.5 h-3.5 rounded-full border border-accent border-t-transparent animate-spin" />
+          Loading
+        </div>
       </div>
     );
   }
