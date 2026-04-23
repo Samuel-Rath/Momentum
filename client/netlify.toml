@@ -2,6 +2,18 @@
   command = "npm run build"
   publish = "dist"
 
+# Proxy API + OAuth handshake to the Render backend.
+# Keeps requests same-origin so there are no CORS preflights and OAuth
+# session cookies land on the Netlify origin (required for passport
+# `state` verification to survive the round trip through Google/GitHub).
+# MUST come before the SPA fallback — Netlify evaluates redirects in order.
+[[redirects]]
+  from = "/api/*"
+  to = "https://momentum-api.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# SPA fallback for client-side routes.
 [[redirects]]
   from = "/*"
   to = "/index.html"
