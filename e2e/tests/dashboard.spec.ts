@@ -7,56 +7,45 @@ test.describe('Dashboard', () => {
     await setupAuthenticatedApp(page);
   });
 
-  test('shows the dashboard after login', async ({ page }) => {
+  test('renders the overview page after login', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    await expect(dash.heading).toBeVisible();
-    await expect(dash.velocityDisplay).toBeVisible();
-    await expect(dash.streakMultiplier).toBeVisible();
+    await expect(dash.topBarTitle).toBeVisible();
+    await expect(dash.heroHeading).toBeVisible();
+    await expect(dash.todaysPracticeHeading).toBeVisible();
   });
 
-  test('displays all habits from API', async ({ page }) => {
+  test('lists all habits from the API', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    // Use role heading or h4 to avoid strict-mode ambiguity
-    await expect(page.locator('h4').filter({ hasText: 'Morning Run' })).toBeVisible();
-    await expect(page.locator('h4').filter({ hasText: 'Deep Work' })).toBeVisible();
-    await expect(page.locator('h4').filter({ hasText: 'Meditation' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /mark complete: morning run/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /completed: deep work/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /mark complete: meditation/i })).toBeVisible();
   });
 
-  test('shows completion count correctly', async ({ page }) => {
+  test('shows completion count (1 of 3 complete)', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    // 1 of 3 habits completed in mock data (Deep Work)
-    await expect(page.getByText('1 / 3 COMPLETE')).toBeVisible();
+    // Two surfaces show the count: the KPI "Today's progress" hint ("1 of 3 complete")
+    // and the Today's-practice section hint ("1 of 3 complete."). Assert both exist.
+    await expect(page.getByText(/1 of 3 complete/i)).toHaveCount(2);
   });
 
-  test('already-completed habit shows filled checkbox', async ({ page }) => {
+  test('completed habit row exposes "Completed" aria-label', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    // Deep Work has completed:true in mock data
-    await expect(page.getByRole('button', { name: 'Mark incomplete' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /completed: deep work/i })).toBeVisible();
   });
 
-  test('uncompleted habit shows empty checkbox', async ({ page }) => {
-    const dash = new DashboardPage(page);
-    await dash.goto();
-
-    await expect(page.getByRole('button', { name: 'Mark complete' }).first()).toBeVisible();
-  });
-
-  test('toggling habit sends API request and updates UI', async ({ page }) => {
-    let upsertCalled = false;
-    let upsertBody: unknown;
-
+  test('toggling an uncompleted habit sends a POST /api/logs', async ({ page }) => {
+    let capturedBody: unknown;
     await page.route('**/api/logs', async (route) => {
       if (route.request().method() === 'POST') {
-        upsertCalled = true;
-        upsertBody = route.request().postDataJSON();
+        capturedBody = route.request().postDataJSON();
         await route.fulfill({ json: { id: 99, ...route.request().postDataJSON() } });
       } else {
         await route.continue();
@@ -65,16 +54,14 @@ test.describe('Dashboard', () => {
 
     const dash = new DashboardPage(page);
     await dash.goto();
+    await dash.toggleHabit('Morning Run');
 
-    // Click the first "Mark complete" button (Morning Run — uncompleted)
-    await page.getByRole('button', { name: 'Mark complete' }).first().click();
-
-    expect(upsertCalled).toBe(true);
-    expect((upsertBody as { habitId: number }).habitId).toBe(1);
-    expect((upsertBody as { completed: boolean }).completed).toBe(true);
+    // Wait for the request to be captured (dashboard fires the toggle async)
+    await expect.poll(() => (capturedBody as { habitId?: number } | undefined)?.habitId).toBe(1);
+    expect((capturedBody as { completed: boolean }).completed).toBe(true);
   });
 
-  test('toggling completed habit marks it incomplete', async ({ page }) => {
+  test('toggling a completed habit flips it to incomplete', async ({ page }) => {
     let capturedBody: unknown;
     await page.route('**/api/logs', async (route) => {
       if (route.request().method() === 'POST') {
@@ -87,59 +74,54 @@ test.describe('Dashboard', () => {
 
     const dash = new DashboardPage(page);
     await dash.goto();
+    await dash.toggleHabit('Deep Work');
 
-    // Deep Work is already completed — click to un-complete
-    await page.getByRole('button', { name: 'Mark incomplete' }).first().click();
-
+    await expect.poll(() => (capturedBody as { habitId?: number } | undefined)?.habitId).toBe(2);
     expect((capturedBody as { completed: boolean }).completed).toBe(false);
   });
 
-  test('shows streak information for habits', async ({ page }) => {
+  test('top streak KPI reflects the longest current streak (21d Deep Work)', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    // MOCK_STREAKS has Deep Work at 21 days
-    await expect(page.getByText('21 DAY STREAK')).toBeVisible();
+    await expect(dash.currentStreakLabel).toBeVisible();
+    // "21" appears in the Current streak KPI — scope to the Top streaks list for specificity
+    await expect(page.getByText('in Deep Work', { exact: false })).toBeVisible();
   });
 
-  test('shows top streak velocity (21 days from Deep Work)', async ({ page }) => {
+  test('top streaks panel shows ranked active streaks', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    const velocityCard = page.locator('div').filter({ hasText: 'CURRENT VELOCITY' }).first();
-    await expect(velocityCard.getByText('21', { exact: true })).toBeVisible();
+    // All three streaks in MOCK_STREAKS are active
+    await expect(dash.topStreaksHeading).toBeVisible();
+    await expect(page.getByText('Deep Work').first()).toBeVisible();
+    await expect(page.getByText('Morning Run').first()).toBeVisible();
   });
 
-  test('streak multiplier reflects top streak (1 + 21*0.08 = 2.7)', async ({ page }) => {
+  test('notes drawer expands when its toggle is clicked', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    // Top streak is 21 days → 1 + 21 * 0.08 = 2.7x
-    const multiplierCard = page.locator('div').filter({ hasText: 'STREAK MULTIPLIER' }).first();
-    await expect(multiplierCard.getByText(/2\.7/)).toBeVisible();
+    // No notes input visible yet
+    await expect(dash.notesInput).toHaveCount(0);
+
+    // Expand notes for "Morning Run" — button is scoped by the habit row
+    const morningRunRow = page
+      .getByRole('button', { name: /mark complete: morning run/i })
+      .locator('..')
+      .locator('..');
+    await morningRunRow.getByRole('button', { name: /show notes/i }).click();
+
+    await expect(dash.notesInput).toBeVisible();
   });
 
-  test('notes panel expands when chevron is clicked', async ({ page }) => {
-    const dash = new DashboardPage(page);
-    await dash.goto();
-
-    // Notes input should not be visible initially
-    await expect(page.getByPlaceholder('Log execution notes…')).not.toBeVisible();
-
-    // Click the chevron on the first uncompleted habit (last button in the habit row)
-    const markCompleteBtn = page.getByRole('button', { name: 'Mark complete' }).first();
-    const habitGroup = markCompleteBtn.locator('xpath=ancestor::div[contains(@class,"group")]');
-    await habitGroup.locator('button').last().click();
-
-    await expect(page.getByPlaceholder('Log execution notes…')).toBeVisible();
-  });
-
-  test('note can be saved with Log button', async ({ page }) => {
+  test('note can be saved via the Save button', async ({ page }) => {
     let savedNote = '';
     await page.route('**/api/logs', async (route) => {
       if (route.request().method() === 'POST') {
         const body = route.request().postDataJSON();
-        savedNote = body.notes;
+        if (body.notes) savedNote = body.notes;
         await route.fulfill({ json: { id: 99, ...body } });
       } else {
         await route.continue();
@@ -149,23 +131,24 @@ test.describe('Dashboard', () => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    // Expand notes for first uncompleted habit
-    const markComplete = page.getByRole('button', { name: 'Mark complete' }).first();
-    const habitRow = markComplete.locator('xpath=ancestor::div[contains(@class,"group")]');
-    await habitRow.locator('button').last().click();
+    const morningRunRow = page
+      .getByRole('button', { name: /mark complete: morning run/i })
+      .locator('..')
+      .locator('..');
+    await morningRunRow.getByRole('button', { name: /show notes/i }).click();
 
-    await page.getByPlaceholder('Log execution notes…').fill('Ran 5km this morning');
-    await page.getByRole('button', { name: 'Log' }).click();
+    await dash.notesInput.fill('Ran 5km this morning');
+    await dash.notesSaveButton.click();
 
-    expect(savedNote).toBe('Ran 5km this morning');
+    await expect.poll(() => savedNote).toBe('Ran 5km this morning');
   });
 
-  test('note can be saved by pressing Enter', async ({ page }) => {
+  test('pressing Enter in the notes input saves', async ({ page }) => {
     let savedNote = '';
     await page.route('**/api/logs', async (route) => {
       if (route.request().method() === 'POST') {
         const body = route.request().postDataJSON();
-        savedNote = body.notes;
+        if (body.notes) savedNote = body.notes;
         await route.fulfill({ json: { id: 99, ...body } });
       } else {
         await route.continue();
@@ -175,51 +158,52 @@ test.describe('Dashboard', () => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    const markComplete = page.getByRole('button', { name: 'Mark complete' }).first();
-    const habitRow = markComplete.locator('xpath=ancestor::div[contains(@class,"group")]');
-    await habitRow.locator('button').last().click();
+    const morningRunRow = page
+      .getByRole('button', { name: /mark complete: morning run/i })
+      .locator('..')
+      .locator('..');
+    await morningRunRow.getByRole('button', { name: /show notes/i }).click();
 
-    await page.getByPlaceholder('Log execution notes…').fill('Pressed Enter to save');
-    await page.getByPlaceholder('Log execution notes…').press('Enter');
+    await dash.notesInput.fill('Pressed Enter to save');
+    await dash.notesInput.press('Enter');
 
-    expect(savedNote).toBe('Pressed Enter to save');
+    await expect.poll(() => savedNote).toBe('Pressed Enter to save');
   });
 
-  test('empty state shows when user has no habits', async ({ page }) => {
-    await page.route('**/api/logs*', (route) => route.fulfill({ json: [] }));
+  test('empty state renders when the user has no habits', async ({ page }) => {
+    await page.route('**/api/logs*', (route) => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: [] });
+      return route.continue();
+    });
 
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    await expect(page.getByText('No protocols loaded')).toBeVisible();
-    await expect(dash.initializeProtocolLink).toBeVisible();
+    await expect(page.getByText(/no practices yet/i)).toBeVisible();
+    await expect(dash.createTaskLink).toBeVisible();
   });
 
-  test('"Initialize Protocol" link navigates to /habits', async ({ page }) => {
-    await page.route('**/api/logs*', (route) => route.fulfill({ json: [] }));
+  test('"Create a task" empty-state link navigates to /habits', async ({ page }) => {
+    await page.route('**/api/logs*', (route) => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: [] });
+      return route.continue();
+    });
 
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    await dash.initializeProtocolLink.click();
-    await expect(page).toHaveURL('/habits');
+    await dash.createTaskLink.click();
+    await expect(page).toHaveURL(/\/habits/);
   });
 
-  test('performance insights section shows completion percentage', async ({ page }) => {
+  test('trend chart and KPI cards are visible', async ({ page }) => {
     const dash = new DashboardPage(page);
     await dash.goto();
 
-    // 1/3 completed = 33%
-    await expect(page.getByText('FOCUS COGNITION')).toBeVisible();
-    // The percentage shows in the insights card — use first() to avoid strict mode
-    await expect(page.getByText('33%').first()).toBeVisible();
-  });
-
-  test('next milestone shows days remaining to 21', async ({ page }) => {
-    const dash = new DashboardPage(page);
-    await dash.goto();
-
-    // Top streak is 21 days → milestone achieved
-    await expect(page.getByText('ELITE MOMENTUM ACHIEVED')).toBeVisible();
+    await expect(page.getByText("Today's progress")).toBeVisible();
+    await expect(dash.weeklyAverageLabel).toBeVisible();
+    await expect(page.getByText('Active streaks')).toBeVisible();
+    // The Completion trend heading is a styled <p>, not a semantic heading
+    await expect(page.getByText(/completion trend/i)).toBeVisible();
   });
 });

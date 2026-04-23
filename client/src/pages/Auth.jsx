@@ -147,13 +147,15 @@ export default function AuthPage() {
           </div>
 
           {/* Tab switcher */}
-          <div className="flex border-b border-rule mb-6">
+          <div role="tablist" aria-label="Authentication mode" className="flex border-b border-rule mb-6">
             {[
               { id: 'login', label: 'Sign in' },
               { id: 'signup', label: 'Sign up' },
             ].map(({ id, label }) => (
               <button
                 key={id}
+                role="tab"
+                aria-selected={tab === id}
                 onClick={() => { setTab(id); setError(''); }}
                 className={`relative flex-1 h-10 font-mono text-[11px] uppercase tracking-tracked transition-colors ${
                   tab === id ? 'text-ink' : 'text-slate hover:text-ink'

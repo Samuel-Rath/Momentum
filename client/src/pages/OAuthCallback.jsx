@@ -33,14 +33,15 @@ export default function OAuthCallback() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="text-center space-y-4">
-          <p className="text-error text-xs font-bold uppercase tracking-widest">{error}</p>
+      <div className="min-h-screen bg-paper flex items-center justify-center p-6 text-ink">
+        <div className="text-center max-w-sm">
+          <p className="eyebrow mb-3">/ Authentication failed</p>
+          <p className="font-serif text-2xl leading-tight mb-6">{error}</p>
           <button
             onClick={() => navigate('/auth', { replace: true })}
-            className="text-primary text-xs uppercase tracking-widest font-bold hover:underline"
+            className="btn-primary"
           >
-            Back to Login
+            Back to sign in
           </button>
         </div>
       </div>
@@ -48,8 +49,15 @@ export default function OAuthCallback() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-primary text-2xl animate-pulse">🔥</div>
+    <div className="min-h-screen bg-paper flex items-center justify-center">
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-slate"
+      >
+        <div className="w-3.5 h-3.5 rounded-full border border-accent border-t-transparent animate-spin" />
+        Verifying your account
+      </div>
     </div>
   );
 }

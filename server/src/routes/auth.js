@@ -33,7 +33,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DUMMY_BCRYPT_HASH = bcrypt.hashSync(require('crypto').randomBytes(32).toString('hex'), 12);
 
 function signToken(userId) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: '7d',
+    algorithm: 'HS256',
+  });
 }
 
 // POST /api/auth/signup

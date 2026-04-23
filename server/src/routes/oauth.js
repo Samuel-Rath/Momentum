@@ -12,7 +12,10 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:5000';
 
 function signToken(userId) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: '7d',
+    algorithm: 'HS256',
+  });
 }
 
 async function findOrCreateOAuthUser({ email, displayName }) {

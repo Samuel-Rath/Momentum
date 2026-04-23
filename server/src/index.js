@@ -42,8 +42,11 @@ app.use(cors({
   credentials: true,
 }));
 
-// Short-lived session — used only for OAuth state verification during the handshake
-app.use(session({
+// Short-lived session — used only for OAuth state verification during the
+// provider handshake. Scoped to the OAuth routes so the rest of the API
+// (JWT-authenticated) doesn't unnecessarily issue session cookies or
+// allocate MemoryStore entries per request.
+const oauthSession = session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -53,12 +56,14 @@ app.use(session({
     sameSite: 'lax',
     maxAge: 10 * 60 * 1000, // 10 minutes
   },
-}));
-app.use(passport.initialize());
-app.use(passport.session());
+});
 
 // Body parser — cap payload at 50kb to prevent abuse
 app.use(express.json({ limit: '50kb' }));
+
+// Passport initialize is cheap and stateless; session middleware is only
+// mounted on the OAuth sub-router below.
+app.use(passport.initialize());
 
 // Rate limit for authenticated API endpoints — 300 requests per minute per IP
 const apiLimiter = rateLimit({
@@ -70,7 +75,8 @@ const apiLimiter = rateLimit({
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/auth', oauthRoutes);
+// OAuth handshake needs session (for state CSRF token) + passport.session().
+app.use('/api/auth', oauthSession, passport.session(), oauthRoutes);
 app.use('/api/habits', apiLimiter, habitRoutes);
 app.use('/api/logs', apiLimiter, logRoutes);
 app.use('/api/analytics', apiLimiter, analyticsRoutes);

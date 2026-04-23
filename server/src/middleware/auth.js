@@ -7,7 +7,10 @@ module.exports = function authMiddleware(req, res, next) {
   }
   const token = header.split(' ')[1];
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    // Pin algorithm to prevent any future alg-confusion attack (e.g. 'none',
+    // or RS256-with-public-key-as-HMAC-key). jsonwebtoken v9+ defaults are
+    // safe, but explicit pinning is the documented best practice.
+    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.userId = payload.userId;
     next();
   } catch {

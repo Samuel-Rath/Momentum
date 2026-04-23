@@ -14,15 +14,20 @@ export class AuthPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.loginTab = page.getByRole('button', { name: 'LOGIN' });
-    this.signupTab = page.getByRole('button', { name: 'SIGN UP' });
+    // Tab switcher uses role="tab" — disambiguates from the form submit
+    // button, which may also have the label "Sign in".
+    this.loginTab = page.getByRole('tab', { name: /sign in/i });
+    this.signupTab = page.getByRole('tab', { name: /sign up/i });
+    // Inputs identified by name attribute — resilient to label text changes
     this.emailInput = page.locator('input[name="email"]');
     this.passwordInput = page.locator('input[name="password"]');
     this.usernameInput = page.locator('input[name="username"]');
+    // The form submit is the only submit button on the page
     this.submitButton = page.locator('form button[type="submit"]');
-    this.errorMessage = page.locator('.bg-error-container\\/20');
-    this.googleButton = page.getByRole('button', { name: /google/i });
-    this.githubButton = page.getByRole('button', { name: /github/i });
+    // Error message uses role="alert" in the Auth form
+    this.errorMessage = page.getByRole('alert');
+    this.googleButton = page.getByRole('button', { name: /continue with google/i });
+    this.githubButton = page.getByRole('button', { name: /continue with github/i });
   }
 
   async goto() {

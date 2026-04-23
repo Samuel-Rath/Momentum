@@ -2,23 +2,38 @@ import { Page, Locator } from '@playwright/test';
 
 export class HabitsPage {
   readonly page: Page;
-  readonly heading: Locator;
+  readonly pageHeading: Locator;
   readonly modal: Locator;
   readonly nameInput: Locator;
   readonly categorySelect: Locator;
   readonly saveButton: Locator;
   readonly cancelButton: Locator;
   readonly errorMessage: Locator;
+  readonly newTaskTopBarButton: Locator;
+  readonly newTaskHeaderButton: Locator;
+  readonly emptyStateCta: Locator;
+  readonly addAnotherTile: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.locator('h1').filter({ hasText: 'Discipline' });
-    this.modal = page.locator('.fixed.inset-0');
-    this.nameInput = page.locator('input[placeholder="e.g. Deep Work Session"]');
-    this.categorySelect = page.locator('select');
-    this.saveButton = page.getByRole('button', { name: /^initialise$|^save changes$/i });
-    this.cancelButton = page.getByRole('button', { name: 'Cancel' });
-    this.errorMessage = page.locator('.text-error.text-xs');
+    // The Habits page body h2 ("The practices you tend to.") — stable and unique.
+    // The AppShell top-bar h1 reads "The practices you track." (for /habits),
+    // which matches /practices/i too, so we disambiguate via level 2.
+    this.pageHeading = page.getByRole('heading', { level: 2, name: /practices you tend to/i });
+    // Modal — role="dialog" for the generic create/edit modal, role="alertdialog" for delete
+    this.modal = page.getByRole('dialog').or(page.locator('.bg-paper.border.border-rule').first());
+    // Inputs resolved by label text rather than brittle placeholder
+    this.nameInput = page.getByLabel(/^\/ A Name$/);
+    this.categorySelect = page.getByLabel(/^\/ D Category$/);
+    this.saveButton = page.getByRole('button', { name: /^(create task|save changes)$/i });
+    this.cancelButton = page.getByRole('button', { name: /^cancel$/i }).first();
+    // Inline form error (role="alert")
+    this.errorMessage = page.getByRole('alert');
+    // CTAs
+    this.newTaskTopBarButton = page.getByRole('link', { name: /^new task$/i });
+    this.newTaskHeaderButton = page.getByRole('button', { name: /^new task$/i });
+    this.emptyStateCta = page.getByRole('button', { name: /create your first task/i });
+    this.addAnotherTile = page.getByRole('button', { name: /add another/i });
   }
 
   async goto() {
@@ -26,50 +41,44 @@ export class HabitsPage {
   }
 
   async openCreateModal() {
-    // Wait for the habits page to finish loading by waiting for either UI state
-    const emptyStateBtn = this.page.getByRole('button', { name: /initialize protocol/i });
-    const newProtocolCard = this.page.locator('h3').filter({ hasText: /^New Protocol$/ });
+    // Prefer the page header button; fall back to the empty-state CTA
+    const header = this.newTaskHeaderButton;
+    const empty = this.emptyStateCta;
+    const tile = this.addAnotherTile;
 
-    // Use whichever appears first
-    await Promise.any([
-      emptyStateBtn.first().waitFor({ timeout: 5000 }).then(() => emptyStateBtn.first().click()),
-      newProtocolCard.first().waitFor({ timeout: 5000 }).then(() => newProtocolCard.first().click()),
-    ]);
+    if (await header.count()) {
+      await header.first().click();
+    } else if (await empty.count()) {
+      await empty.first().click();
+    } else {
+      await tile.first().click();
+    }
   }
 
   async createHabit(name: string, category?: string, frequency?: string) {
     await this.openCreateModal();
     await this.nameInput.fill(name);
-    if (category) {
-      await this.categorySelect.selectOption(category);
-    }
+    if (category) await this.categorySelect.selectOption(category);
     if (frequency) {
       await this.page.getByRole('button', { name: new RegExp(`^${frequency}$`, 'i') }).click();
     }
     await this.saveButton.click();
   }
 
-  /** Returns the delete button for any visible habit card */
-  deleteButton() {
-    return this.page.locator('button[aria-label="Delete habit"]').first();
+  /** Edit button for the nth habit card (0-indexed) */
+  editButtonFor(name: string) {
+    return this.page.getByRole('button', { name: `Edit ${name}` });
   }
 
-  /** Confirm button inside the delete confirmation modal */
+  deleteButtonFor(name: string) {
+    return this.page.getByRole('button', { name: `Delete ${name}` });
+  }
+
   confirmDeleteButton() {
     return this.page.getByRole('alertdialog').getByRole('button', { name: /^delete$/i });
   }
 
-  /** Cancel button inside the delete confirmation modal */
   cancelDeleteButton() {
     return this.page.getByRole('alertdialog').getByRole('button', { name: /^cancel$/i });
-  }
-
-  /** Returns the edit (Pencil) button in the featured first card */
-  firstEditButton() {
-    // The edit button is always the FIRST icon button in the featured card's button group
-    return this.page
-      .locator('.col-span-12.lg\\:col-span-8')
-      .getByRole('button')
-      .first();
   }
 }
