@@ -53,6 +53,7 @@ export const analyticsApi = {
   completion: (period) => api.get(`/analytics/completion?period=${period}`),
   heatmap: () => api.get('/analytics/heatmap'),
   insights: () => api.get('/analytics/insights'),
+  performance: (days) => api.get(`/analytics/performance?period=${days}`),
 };
 
 export default api;

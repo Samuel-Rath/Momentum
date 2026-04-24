@@ -6,6 +6,7 @@ import {
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from 'recharts';
+import PerformanceBoard from '../components/PerformanceBoard';
 
 export default function Analytics() {
   const [streaks, setStreaks] = useState([]);
@@ -388,6 +389,9 @@ export default function Analytics() {
           </div>
         </div>
       </section>
+
+      {/* ── Performance board — professional view ── */}
+      <PerformanceBoard />
     </div>
   );
 }

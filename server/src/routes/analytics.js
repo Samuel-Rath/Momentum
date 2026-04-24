@@ -4,6 +4,7 @@ const prisma = require('../lib/prisma');
 const { computeStreaks } = require('../services/streaks');
 const { completionByPeriod, heatmapData } = require('../services/analytics');
 const { generateInsights } = require('../services/insights');
+const { buildPerformanceReport } = require('../services/performance');
 
 const router = express.Router();
 
@@ -90,6 +91,37 @@ router.get('/insights', async (req, res, next) => {
     });
 
     res.json(generateInsights(habits, logs));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/analytics/performance?period=7|30|90
+// Rich professional rollup: day-of-week matrix, category leaderboard,
+// rolling 8-week trend with 4-week MA, per-habit scoring, at-risk watchlist.
+router.get('/performance', async (req, res, next) => {
+  try {
+    const parsed = parseInt(req.query.period, 10);
+    const days = [7, 30, 90].includes(parsed) ? parsed : 30;
+
+    // Pull enough history for both the active window and window-over-window
+    // delta, plus the 8-week trend lookback — whichever is longest.
+    const lookback = Math.max(days * 2, 8 * 7);
+    const since = new Date();
+    since.setDate(since.getDate() - lookback);
+
+    const habits = await prisma.habit.findMany({
+      where: { userId: req.userId, isActive: true },
+    });
+
+    const logs = await prisma.habitLog.findMany({
+      where: {
+        habit: { userId: req.userId, isActive: true },
+        date: { gte: since },
+      },
+    });
+
+    res.json(buildPerformanceReport(habits, logs, days));
   } catch (err) {
     next(err);
   }
