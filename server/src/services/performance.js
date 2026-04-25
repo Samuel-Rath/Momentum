@@ -102,11 +102,34 @@ function buildPerformanceReport(habits, logs, days) {
   const recentCut = new Date();
   recentCut.setDate(recentCut.getDate() - halfWindow);
 
+  // Pre-build the date axis for the active window so per-habit series share it.
+  const seriesPoints = Math.min(days, 30);
+  const bucketSize = Math.ceil(days / seriesPoints);
+  const seriesDates = [];
+  for (let i = seriesPoints - 1; i >= 0; i--) {
+    const end = new Date();
+    end.setDate(end.getDate() - i * bucketSize);
+    const start = new Date(end);
+    start.setDate(start.getDate() - (bucketSize - 1));
+    seriesDates.push({ start, end });
+  }
+
   const habitRows = habits.map((h) => {
     const hLogs = inWindow.filter((l) => l.habitId === h.id);
     const total = hLogs.length;
     const completed = hLogs.filter((l) => l.completed).length;
     const rate = total > 0 ? completed / total : 0;
+
+    // Per-habit completion series (sparkline data) — bucketed when window > 30d
+    const series = seriesDates.map(({ start, end }) => {
+      const bucket = hLogs.filter((l) => {
+        const d = new Date(l.date);
+        return d >= start && d <= end;
+      });
+      const t = bucket.length;
+      const c = bucket.filter((l) => l.completed).length;
+      return t > 0 ? c / t : null;
+    });
 
     // Consistency — stddev of daily completion (lower is more consistent, inverted to 0..1)
     const byDay = new Map();
@@ -160,6 +183,7 @@ function buildPerformanceReport(habits, logs, days) {
       trend,
       score,
       lastActive,
+      series,
     };
   });
 

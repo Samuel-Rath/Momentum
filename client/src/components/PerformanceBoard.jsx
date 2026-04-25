@@ -2,12 +2,18 @@ import { useState, useEffect, useMemo } from 'react';
 import { analyticsApi } from '../lib/api';
 import {
   ArrowUpRight, ArrowDownRight, Minus, ArrowUpDown,
-  TrendingUp, AlertCircle, LineChart as LineIcon,
+  TrendingUp, AlertCircle,
 } from 'lucide-react';
 import {
-  LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip,
+  Line, ResponsiveContainer, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine, Area, AreaChart,
 } from 'recharts';
+
+// Stagger child sections on mount so the board reads as "compiling".
+const ANIM = (delay) => ({
+  animationDelay: `${delay}ms`,
+  animationFillMode: 'both',
+});
 
 const PERIODS = [
   { days: 7, label: '7 days' },
@@ -66,17 +72,7 @@ export default function PerformanceBoard() {
     }
   };
 
-  if (loading && !data) {
-    return (
-      <section className="mb-14 sm:mb-20">
-        <SectionHeader num="05" title="Performance" italic="board" trailing="— professional view." />
-        <div className="border border-rule bg-paper p-10 text-center">
-          <LineIcon size={18} className="text-slate-soft mx-auto mb-3 animate-pulse-soft" />
-          <p className="eyebrow">Compiling report…</p>
-        </div>
-      </section>
-    );
-  }
+  if (loading && !data) return <BoardSkeleton />;
 
   if (!data) return null;
 
@@ -114,7 +110,10 @@ export default function PerformanceBoard() {
       />
 
       {/* ── Top-line KPIs ── */}
-      <div className="grid grid-cols-12 gap-[1px] bg-rule border border-rule mb-[1px]">
+      <div
+        className="grid grid-cols-12 gap-[1px] bg-rule border border-rule mb-[1px] animate-slide-up"
+        style={ANIM(40)}
+      >
         <BoardKpi
           span="col-span-6 lg:col-span-3"
           num="A"
@@ -158,7 +157,10 @@ export default function PerformanceBoard() {
       </div>
 
       {/* ── Day of week matrix + Category leaderboard ── */}
-      <div className="grid grid-cols-12 gap-[1px] bg-rule border border-rule border-t-0 mb-[1px]">
+      <div
+        className="grid grid-cols-12 gap-[1px] bg-rule border border-rule border-t-0 mb-[1px] animate-slide-up"
+        style={ANIM(120)}
+      >
         <div className="col-span-12 lg:col-span-7 bg-paper p-6 sm:p-8">
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -185,7 +187,10 @@ export default function PerformanceBoard() {
       </div>
 
       {/* ── Rolling trend ── */}
-      <div className="bg-paper border border-rule border-t-0 p-6 sm:p-8 mb-[1px]">
+      <div
+        className="bg-paper border border-rule border-t-0 p-6 sm:p-8 mb-[1px] animate-slide-up"
+        style={ANIM(200)}
+      >
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
           <div>
             <p className="eyebrow">/ 05C Eight-week trend</p>
@@ -199,8 +204,11 @@ export default function PerformanceBoard() {
         <TrendChart weeks={weeks} />
       </div>
 
-      {/* ── Per-habit scoring table ── */}
-      <div className="bg-paper border border-rule border-t-0 p-6 sm:p-8 mb-[1px]">
+      {/* ── Per-habit scoring (table desktop, cards mobile) ── */}
+      <div
+        className="bg-paper border border-rule border-t-0 p-6 sm:p-8 mb-[1px] animate-slide-up"
+        style={ANIM(280)}
+      >
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="eyebrow">/ 05D Habit scoring</p>
@@ -211,16 +219,26 @@ export default function PerformanceBoard() {
           </span>
         </div>
 
-        <HabitTable
-          habits={sortedHabits}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSort={handleSort}
-        />
+        {/* Mobile: cards */}
+        <div className="sm:hidden">
+          <HabitCards habits={sortedHabits} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+        </div>
+        {/* Desktop: table */}
+        <div className="hidden sm:block">
+          <HabitTable
+            habits={sortedHabits}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={handleSort}
+          />
+        </div>
       </div>
 
       {/* ── At-risk watchlist ── */}
-      <div className="bg-paper border border-rule border-t-0 p-6 sm:p-8">
+      <div
+        className="bg-paper border border-rule border-t-0 p-6 sm:p-8 animate-slide-up"
+        style={ANIM(360)}
+      >
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
             <AlertCircle size={16} className="text-warning" />
@@ -484,15 +502,20 @@ function HabitTable({ habits, sortKey, sortDir, onSort }) {
                   {String(i + 1).padStart(2, '0')}
                 </td>
                 <td className="py-3 pr-4 align-middle">
-                  <div className="flex items-baseline gap-2 min-w-0">
-                    <span className="font-serif text-[15px] leading-tight truncate">
-                      {h.name}
-                    </span>
-                    {h.category && (
-                      <span className="eyebrow text-[9px] capitalize shrink-0">
-                        {h.category}
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2 min-w-0">
+                      <span className="font-serif text-[15px] leading-tight truncate">
+                        {h.name}
                       </span>
-                    )}
+                      {h.category && (
+                        <span className="eyebrow text-[9px] capitalize shrink-0">
+                          {h.category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1.5">
+                      <Sparkline series={h.series} trend={h.trend} />
+                    </div>
                   </div>
                 </td>
                 <td className="py-3 pl-4 text-right align-middle">
@@ -652,5 +675,267 @@ function LegendLine({ color, label, dashed }) {
       </svg>
       <span className="eyebrow text-[10px] normal-case">{label}</span>
     </div>
+  );
+}
+
+// ── Inline sparkline ──
+// Renders a small SVG path from a 0..1 series. Nulls create gaps in the line.
+function Sparkline({ series, trend = 0, width = 96, height = 18 }) {
+  if (!series || series.length === 0) {
+    return (
+      <div
+        style={{ width, height }}
+        className="bg-paper-3"
+        aria-hidden
+      />
+    );
+  }
+
+  const padY = 2;
+  const usable = height - padY * 2;
+  const lastIdx = series.length - 1;
+
+  const points = series.map((v, i) => ({
+    x: lastIdx === 0 ? width / 2 : (i / lastIdx) * width,
+    y: v === null ? null : height - padY - v * usable,
+  }));
+
+  let d = '';
+  let inSeg = false;
+  for (const p of points) {
+    if (p.y === null) {
+      inSeg = false;
+    } else if (!inSeg) {
+      d += `M${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+      inSeg = true;
+    } else {
+      d += ` L${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+    }
+  }
+
+  const last = [...points].reverse().find((p) => p.y !== null);
+  const color = trend >= 0 ? '#1E3A5F' : '#8A6F3D';
+
+  return (
+    <svg width={width} height={height} className="block overflow-visible" aria-hidden>
+      <line
+        x1={0} x2={width}
+        y1={height - padY - 0.7 * usable}
+        y2={height - padY - 0.7 * usable}
+        stroke="#D6CFBE" strokeDasharray="2 3" strokeWidth="0.75"
+      />
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {last && (
+        <circle cx={last.x} cy={last.y} r="1.6" fill={color} />
+      )}
+    </svg>
+  );
+}
+
+// ── Habit cards (mobile) ──
+function HabitCards({ habits, sortKey, sortDir, onSort }) {
+  if (!habits || habits.length === 0) {
+    return (
+      <div className="text-center py-10 border-t border-rule-soft">
+        <p className="font-serif text-xl mb-1">No habits to rank.</p>
+        <p className="text-xs text-slate">Add habits to populate the board.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Sort chips — horizontally scrollable on narrow phones */}
+      <div className="-mx-6 px-6 mb-4 overflow-x-auto">
+        <div className="flex gap-1.5 min-w-max">
+          {SORT_COLUMNS.map((col) => {
+            const active = sortKey === col.key;
+            return (
+              <button
+                key={col.key}
+                onClick={() => onSort(col.key)}
+                className={`shrink-0 px-2.5 h-7 font-mono text-[10px] uppercase tracking-tracked-tight border rounded-sm transition-colors ${
+                  active
+                    ? 'bg-accent text-accent-fg border-accent'
+                    : 'bg-paper-2 text-slate border-rule hover:text-ink hover:border-rule-strong'
+                }`}
+                aria-pressed={active}
+              >
+                {col.label}
+                {active && <span className="ml-1.5">{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <ol className="divide-y divide-rule-soft border-t border-rule-soft">
+        {habits.map((h, i) => {
+          const scorePct = Math.round(h.score * 100);
+          return (
+            <li key={h.id} className="py-4">
+              <div className="flex items-baseline justify-between gap-3 mb-2.5">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <span className="font-mono text-[10px] text-slate-soft tabular-nums w-6 shrink-0 tabular-nums">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="font-serif text-base leading-tight truncate">{h.name}</span>
+                </div>
+                {h.category && (
+                  <span className="eyebrow text-[9px] capitalize shrink-0">{h.category}</span>
+                )}
+              </div>
+
+              <div className="ml-8 mb-3">
+                <div className="flex items-center gap-3">
+                  <ScoreCell pct={scorePct} />
+                  <Sparkline series={h.series} trend={h.trend} width={80} height={16} />
+                </div>
+              </div>
+
+              <dl className="ml-8 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                <CardStat label="Rate" value={h.total > 0 ? `${Math.round(h.rate * 100)}%` : '—'} />
+                <CardStat label="Consistency" value={h.total > 0 ? `${Math.round(h.consistency * 100)}%` : '—'} />
+                <CardStat label="Trend" value={<TrendTag trend={h.trend} small />} />
+                <CardStat
+                  label="Last active"
+                  value={
+                    h.lastActive === null
+                      ? '—'
+                      : h.lastActive === 0
+                      ? 'Today'
+                      : `${h.lastActive}d ago`
+                  }
+                />
+              </dl>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function CardStat({ label, value }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 border-b border-rule-soft/50 pb-1.5 last-of-type:border-b-0">
+      <dt className="font-mono text-[9px] uppercase tracking-tracked-tight text-slate-soft">
+        {label}
+      </dt>
+      <dd className="font-mono text-[12px] tabular-nums text-ink">{value}</dd>
+    </div>
+  );
+}
+
+// ── Editorial skeleton ──
+// Matches the live layout so the page reserves space and reads as
+// "compiling a report" rather than a generic spinner.
+function BoardSkeleton() {
+  return (
+    <section className="mb-14 sm:mb-20 animate-fade-in">
+      <SectionHeader
+        num="05"
+        title="Performance"
+        italic="board"
+        trailing="— professional view."
+        hint="Compiling report…"
+      />
+
+      {/* KPI strip */}
+      <div className="grid grid-cols-12 gap-[1px] bg-rule border border-rule mb-[1px]">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="col-span-6 lg:col-span-3 bg-paper p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-5">
+              <SkelBar w="22px" h="10px" />
+              <SkelBar w="80px" h="10px" />
+            </div>
+            <SkelBar w="60%" h="40px" />
+            <div className="mt-3"><SkelBar w="45%" h="11px" /></div>
+          </div>
+        ))}
+      </div>
+
+      {/* Day of week + categories row */}
+      <div className="grid grid-cols-12 gap-[1px] bg-rule border border-rule border-t-0 mb-[1px]">
+        <div className="col-span-12 lg:col-span-7 bg-paper p-6 sm:p-8 space-y-3">
+          <SkelBar w="40%" h="12px" />
+          <SkelBar w="55%" h="20px" />
+          <div className="space-y-2.5 pt-2">
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="grid grid-cols-[44px_1fr_60px] items-center gap-3">
+                <SkelBar w="28px" h="10px" />
+                <SkelBar w={`${40 + (i * 7) % 50}%`} h="14px" />
+                <SkelBar w="40px" h="11px" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="col-span-12 lg:col-span-5 bg-paper p-6 sm:p-8 space-y-3">
+          <SkelBar w="50%" h="12px" />
+          <SkelBar w="60%" h="20px" />
+          <div className="space-y-3 pt-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex justify-between">
+                  <SkelBar w="50%" h="14px" />
+                  <SkelBar w="32px" h="11px" />
+                </div>
+                <SkelBar w="100%" h="2px" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Trend chart */}
+      <div className="bg-paper border border-rule border-t-0 p-6 sm:p-8 mb-[1px]">
+        <div className="flex justify-between mb-6">
+          <div className="space-y-2">
+            <SkelBar w="160px" h="11px" />
+            <SkelBar w="220px" h="20px" />
+          </div>
+          <SkelBar w="120px" h="11px" />
+        </div>
+        <div className="h-72 relative overflow-hidden bg-paper-2">
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-rule/40 to-transparent" />
+        </div>
+      </div>
+
+      {/* Habit table skeleton */}
+      <div className="bg-paper border border-rule border-t-0 p-6 sm:p-8">
+        <div className="flex justify-between mb-6">
+          <div className="space-y-2">
+            <SkelBar w="120px" h="11px" />
+            <SkelBar w="180px" h="20px" />
+          </div>
+        </div>
+        <div className="space-y-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="grid grid-cols-[28px_1fr_80px_60px] items-center gap-4 py-2">
+              <SkelBar w="20px" h="11px" />
+              <SkelBar w={`${50 + (i * 11) % 30}%`} h="15px" />
+              <SkelBar w="60px" h="11px" />
+              <SkelBar w="40px" h="11px" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SkelBar({ w, h }) {
+  return (
+    <div
+      className="bg-paper-3 animate-pulse-soft rounded-sm"
+      style={{ width: w, height: h }}
+    />
   );
 }

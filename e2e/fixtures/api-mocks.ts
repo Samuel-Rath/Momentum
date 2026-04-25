@@ -151,20 +151,24 @@ export const MOCK_PERFORMANCE = {
     {
       id: 1, name: 'Morning Run', category: 'health', color: '#1E3A5F', icon: '🏃',
       total: 30, completed: 22, rate: 0.73, consistency: 0.81, trend: 0.05, score: 0.7, lastActive: 0,
+      series: [0.6, 0.7, 0.5, 0.8, 0.7, 0.9, 0.6, 0.8, 0.75, 0.85, 0.7, 0.9],
     },
     {
       id: 2, name: 'Deep Work', category: 'productivity', color: '#8A6F3D', icon: '💻',
       total: 30, completed: 25, rate: 0.83, consistency: 0.88, trend: 0.1, score: 0.78, lastActive: 0,
+      series: [0.7, 0.8, 0.85, 0.75, 0.9, 0.85, 0.95, 0.8, 0.9, 0.85, 0.95, 0.9],
     },
     {
       id: 3, name: 'Meditation', category: 'mindfulness', color: '#2C6E4F', icon: '🧘',
       total: 30, completed: 18, rate: 0.6, consistency: 0.65, trend: -0.12, score: 0.5, lastActive: 1,
+      series: [0.8, 0.75, 0.7, 0.6, 0.55, 0.65, 0.5, 0.45, 0.55, 0.5, 0.4, 0.45],
     },
   ],
   atRisk: [
     {
       id: 3, name: 'Meditation', category: 'mindfulness', color: '#2C6E4F', icon: '🧘',
       total: 30, completed: 18, rate: 0.6, consistency: 0.65, trend: -0.12, score: 0.5, lastActive: 1,
+      series: [0.8, 0.75, 0.7, 0.6, 0.55, 0.65, 0.5, 0.45, 0.55, 0.5, 0.4, 0.45],
     },
   ],
 };
