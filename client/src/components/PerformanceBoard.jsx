@@ -209,10 +209,13 @@ export default function PerformanceBoard() {
         className="bg-paper border border-rule border-t-0 p-6 sm:p-8 mb-[1px] animate-slide-up"
         style={ANIM(280)}
       >
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
           <div>
             <p className="eyebrow">/ 05D Habit scoring</p>
             <p className="font-serif text-lg mt-1">Each habit, ranked.</p>
+            <p className="text-xs text-slate mt-1.5 max-w-md">
+              Rates are scored against each habit's cadence — daily habits per day, weekly per week.
+            </p>
           </div>
           <span className="eyebrow text-[10px] hidden sm:inline-flex items-center gap-1.5">
             <ArrowUpDown size={11} /> Click a column
@@ -507,6 +510,7 @@ function HabitTable({ habits, sortKey, sortDir, onSort }) {
                       <span className="font-serif text-[15px] leading-tight truncate">
                         {h.name}
                       </span>
+                      <FrequencyChip frequency={h.frequency} />
                       {h.category && (
                         <span className="eyebrow text-[9px] capitalize shrink-0">
                           {h.category}
@@ -662,6 +666,22 @@ function DeltaTag({ delta }) {
   );
 }
 
+// Cadence indicator next to a habit name. Empty for daily/unknown so we
+// only call out the cadence when it's notable (weekly), keeping daily
+// habits visually quiet — they're the default.
+function FrequencyChip({ frequency }) {
+  if (!frequency || frequency === 'daily') return null;
+  const label = frequency === 'weekly' ? 'Weekly' : 'Custom';
+  return (
+    <span
+      className="inline-flex items-center px-1.5 h-[16px] font-mono text-[9px] uppercase tracking-tracked-tight text-brass border border-brass/30 bg-brass-soft rounded-sm shrink-0"
+      title={`${label} cadence — scored once per ${frequency === 'weekly' ? 'week' : 'period'}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function LegendLine({ color, label, dashed }) {
   return (
     <div className="flex items-center gap-2">
@@ -788,9 +808,12 @@ function HabitCards({ habits, sortKey, sortDir, onSort }) {
                   </span>
                   <span className="font-serif text-base leading-tight truncate">{h.name}</span>
                 </div>
-                {h.category && (
-                  <span className="eyebrow text-[9px] capitalize shrink-0">{h.category}</span>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <FrequencyChip frequency={h.frequency} />
+                  {h.category && (
+                    <span className="eyebrow text-[9px] capitalize">{h.category}</span>
+                  )}
+                </div>
               </div>
 
               <div className="ml-8 mb-3">

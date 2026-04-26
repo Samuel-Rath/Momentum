@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
@@ -7,8 +7,23 @@ import AuthPage from './pages/Auth';
 import OAuthCallback from './pages/OAuthCallback';
 import Dashboard from './pages/Dashboard';
 import Habits from './pages/Habits';
-import Analytics from './pages/Analytics';
 import AppShell from './components/layout/AppShell';
+
+// Analytics is the heaviest page (recharts) and is rarely the user's first
+// stop — load it on demand so the dashboard's first paint doesn't wait on
+// chart code that may never be needed.
+const Analytics = lazy(() => import('./pages/Analytics'));
+
+function RouteFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh] gap-3">
+      <div className="w-3.5 h-3.5 rounded-full border border-accent border-t-transparent animate-spin" />
+      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate">
+        Loading
+      </span>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -57,7 +72,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           >
             <Route index element={<Dashboard />} />
             <Route path="habits" element={<Habits />} />
-            <Route path="analytics" element={<Analytics />} />
+            <Route
+              path="analytics"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <Analytics />
+                </Suspense>
+              }
+            />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
